@@ -1,0 +1,57 @@
+# Floravia - infraestructura local y de produccion
+# Uso:
+#   docker compose up -d          -> levanta la base de datos
+#   docker compose --profile dev up -d   -> ademas levanta Adminer (panel web de la BD)
+#   docker compose down           -> detiene (los datos se conservan en el volumen)
+#   docker compose down -v        -> detiene y BORRA los datos
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: floravia-db
+    restart: unless-stopped          # se reinicia solo si el servidor se reinicia o falla
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-floravia}
+      POSTGRES_USER: ${POSTGRES_USER:-floravia_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en el archivo .env}
+      TZ: America/Guayaquil
+    ports:
+      # Solo accesible desde la propia maquina (seguro). En produccion, si la API
+      # corre en Docker dentro de esta misma red, puedes eliminar este bloque.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - floravia_pgdata:/var/lib/postgresql/data   # persistencia de datos
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-floravia_user} -d ${POSTGRES_DB:-floravia}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - floravia_net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Panel web opcional para ver tablas (solo desarrollo)
+  adminer:
+    image: adminer:latest
+    container_name: floravia-adminer
+    profiles: ["dev"]
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks:
+      - floravia_net
+
+volumes:
+  floravia_pgdata:
+
+networks:
+  floravia_net:
+    driver: bridge

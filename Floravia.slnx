@@ -1,2 +1,11 @@
 <Solution>
+  <Folder Name="/api/">
+    <Project Path="api/Api.csproj" />
+  </Folder>
+  <Folder Name="/application/">
+    <Project Path="application/Application.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Floravia.Tests.csproj" />
+  </Folder>
 </Solution>
