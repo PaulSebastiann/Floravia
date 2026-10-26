@@ -1,41 +1,44 @@
+using Dapper;
+using Floravia.Core.Entidades;
+using Npgsql;
+
+DefaultTypeMap.MatchNamesWithUnderscores = true; // id_categoria -> IdCategoria
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+var cs = builder.Configuration.GetConnectionString("Default")
+    ?? throw new InvalidOperationException("Falta ConnectionStrings:Default");
+builder.Services.AddSingleton(NpgsqlDataSource.Create(cs));
+
+builder.Services.AddCors(o => o.AddPolicy("Frontend", p => p
+    .WithOrigins("http://localhost:5173")
+    .AllowAnyHeader()
+    .AllowAnyMethod()));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+app.UseCors("Frontend");
 
-var summaries = new[]
+app.MapGet("/health", async (NpgsqlDataSource db) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    await using var cmd = db.CreateCommand("SELECT 1");
+    await cmd.ExecuteScalarAsync();
+    return Results.Ok(new { estado = "ok", baseDatos = "conectada" });
+});
 
-app.MapGet("/weatherforecast", () =>
+app.MapGet("/api/categorias", async (NpgsqlDataSource db) =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    await using var conn = await db.OpenConnectionAsync();
+    var categorias = await conn.QueryAsync<Categoria>(
+        "SELECT id_categoria, id_categoria_padre, nombre, descripcion FROM categoria ORDER BY nombre");
+    return Results.Ok(categorias);
+});
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

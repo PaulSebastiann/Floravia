@@ -5,6 +5,12 @@
   <Folder Name="/application/">
     <Project Path="application/Application.csproj" />
   </Folder>
+  <Folder Name="/core/">
+    <Project Path="core/Core.csproj" />
+  </Folder>
+  <Folder Name="/infrastructure/">
+    <Project Path="infrastructure/Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Floravia.Tests.csproj" />
   </Folder>
