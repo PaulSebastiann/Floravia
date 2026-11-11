@@ -1,6 +1,149 @@
-@Api_HostAddress = http://localhost:5071
+### Floravia API - peticiones de ejemplo (extensión "REST Client" de VS Code, o Visual Studio / Rider).
+### Recorre el flujo completo: registrarse -> carrito -> dirección -> pedido -> pagar -> admin aprueba.
 
-GET {{Api_HostAddress}}/weatherforecast/
-Accept: application/json
+@host = http://localhost:5071
+
+### ───────── Salud ─────────
+GET {{host}}/health
 
 ###
+GET {{host}}/health/ready
+
+### ───────── Catálogo público ─────────
+GET {{host}}/api/categorias
+
+###
+GET {{host}}/api/productos?texto=rosa&orden=precio_asc&pagina=1&tamanoPagina=12
+
+###
+GET {{host}}/api/productos/1
+
+###
+GET {{host}}/api/pagos/metodos
+
+### ───────── Cuenta ─────────
+# @name registro
+POST {{host}}/api/auth/registro
+Content-Type: application/json
+
+{
+  "correo": "ana@correo.com",
+  "password": "Clave1234",
+  "cedula": "1712345678",
+  "nombres": "Ana",
+  "apellidos": "Prueba",
+  "telefono": "0999999999"
+}
+
+###
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "correo": "ana@correo.com", "password": "Clave1234" }
+
+###
+@token = {{login.response.body.token}}
+
+GET {{host}}/api/auth/me
+Authorization: Bearer {{token}}
+
+### ───────── Carrito (con sesión) ─────────
+POST {{host}}/api/carrito/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "idProducto": 1, "cantidad": 2 }
+
+###
+GET {{host}}/api/carrito
+Authorization: Bearer {{token}}
+
+### Carrito de VISITANTE: la primera respuesta trae "token"; envíalo en la cabecera X-Carrito-Token.
+POST {{host}}/api/carrito/items
+Content-Type: application/json
+
+{ "idProducto": 1, "cantidad": 1 }
+
+### ───────── Dirección y pedido ─────────
+GET {{host}}/api/zonas-entrega
+
+###
+# @name direccion
+POST {{host}}/api/cuenta/direcciones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "idZona": 1, "callePrincipal": "Av. Amazonas N10", "calleSecundaria": "Naciones Unidas", "referencia": "Edificio azul", "esPrincipal": true }
+
+###
+# @name pedido
+POST {{host}}/api/pedidos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "idDireccion": {{direccion.response.body.idDireccion}} }
+
+### ───────── Pago con TARJETA (simulada: no cobra nada) ─────────
+# 4242 4242 4242 4242 = aprobada | 4000 0000 0000 0002 = rechazada (402) | 4000 0000 0000 9995 = fondos insuficientes
+POST {{host}}/api/pedidos/{{pedido.response.body.idPedido}}/pagos/tarjeta
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "numero": "4242 4242 4242 4242", "titular": "ANA PRUEBA", "mesVencimiento": 12, "anioVencimiento": 2030, "cvv": "123" }
+
+### ───────── Pago por TRANSFERENCIA (comprobante) ─────────
+# Cambia ./comprobante.png por un archivo real (JPG, PNG, WEBP o PDF, máx. 5 MB).
+POST {{host}}/api/pedidos/{{pedido.response.body.idPedido}}/pagos/transferencia
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=limite
+
+--limite
+Content-Disposition: form-data; name="referencia"
+
+TRF-000123
+--limite
+Content-Disposition: form-data; name="comprobante"; filename="comprobante.png"
+Content-Type: image/png
+
+< ./comprobante.png
+--limite--
+
+###
+GET {{host}}/api/pedidos
+Authorization: Bearer {{token}}
+
+### ───────── Administración (usuario ADMIN) ─────────
+# @name loginAdmin
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{ "correo": "admin@floravia.local", "password": "Admin12345" }
+
+###
+@tokenAdmin = {{loginAdmin.response.body.token}}
+
+GET {{host}}/api/admin/dashboard?dias=30&top=5
+Authorization: Bearer {{tokenAdmin}}
+
+###
+GET {{host}}/api/admin/pagos/pendientes
+Authorization: Bearer {{tokenAdmin}}
+
+###
+POST {{host}}/api/admin/pagos/1/aprobar
+Authorization: Bearer {{tokenAdmin}}
+
+###
+POST {{host}}/api/admin/pedidos/1/estado
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{ "estado": "EN_PREPARACION" }
+
+###
+POST {{host}}/api/admin/productos
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: application/json
+
+{ "idCategoria": 1, "codigo": "ROSA-001", "nombre": "Ramo de rosas rojas", "descripcion": "12 rosas", "cuidados": "Cambiar el agua cada día", "precio": 24.90, "stockMinimo": 3, "stockInicial": 20, "idColores": [1] }

@@ -1,116 +1,90 @@
-using System.Net.Mail;
-using System.Text.RegularExpressions;
+using System.Net;
+using System.Security.Claims;
 using Api.Auth;
-using Dapper;
+using Api.Servicios;
+using Floravia.Application;
+using Floravia.Application.MD.Tienda;
 using Floravia.Core;
-using Floravia.Core.Entidades;
-using Npgsql;
 
 namespace Api.Endpoints;
 
 public record RegistroDto(string Correo, string Password, string Cedula, string Nombres, string Apellidos, string Telefono);
 public record LoginDto(string Correo, string Password);
+public record RecuperarDto(string Correo);
+public record RestablecerDto(string Token, string Password);
+public record CambiarPasswordDto(string PasswordActual, string PasswordNueva);
+public record SesionDto(string Token, DateTime ExpiraEn, string Rol, string Nombre);
 
+/// <summary>Registro, login, recuperación y cambio de contraseña. Toda la lógica vive en CuentaMD.</summary>
 public static class AuthEndpoints
 {
-    private static readonly string HashFalso = BCrypt.Net.BCrypt.HashPassword("no-existe", 12);
-
     public static void MapAuth(this IEndpointRouteBuilder app)
     {
-        var g = app.MapGroup("/api/auth").AllowAnonymous();
+        // Rutas públicas con límite estricto de intentos por IP (frena la fuerza bruta).
+        var publico = app.MapGroup("/api/auth").AllowAnonymous().RequireRateLimiting("estricta").WithTags("Autenticación");
 
-        g.MapPost("/registro", async (RegistroDto d, NpgsqlDataSource db, TokenService tokens) =>
+        publico.MapPost("/registro", async (RegistroDto d, FloraviaServicios s, TokenService tokens) =>
         {
-            var correo = (d.Correo ?? "").Trim().ToLowerInvariant();
-            var errores = new Dictionary<string, string[]>();
-            if (!MailAddress.TryCreate(correo, out var m) || m.Address != correo) errores["correo"] = ["Correo inválido"];
-            if ((d.Password ?? "").Length < 8) errores["password"] = ["Mínimo 8 caracteres"];
-            if (!Regex.IsMatch(d.Cedula ?? "", @"^\d{10}$")) errores["cedula"] = ["Debe tener 10 dígitos"];
-            if (string.IsNullOrWhiteSpace(d.Nombres)) errores["nombres"] = ["Requerido"];
-            if (string.IsNullOrWhiteSpace(d.Apellidos)) errores["apellidos"] = ["Requerido"];
-            if (string.IsNullOrWhiteSpace(d.Telefono)) errores["telefono"] = ["Requerido"];
-            if (errores.Count > 0) return Results.ValidationProblem(errores);
+            var cliente = await s.Cuenta.RegistrarClienteAsync(
+                new RegistroCliente(d.Correo, d.Password, d.Cedula, d.Nombres, d.Apellidos, d.Telefono));
+            var (token, expira) = tokens.Crear(cliente.IdUsuario, Validar.Correo(d.Correo), Roles.Cliente, cliente.IdCliente);
+            return Results.Created("/api/auth/me",
+                new SesionDto(token, expira, Roles.Cliente, $"{cliente.Nombres} {cliente.Apellidos}"));
+        });
 
-            var hash = BCrypt.Net.BCrypt.HashPassword(d.Password, 12);
-            await using var conn = await db.OpenConnectionAsync();
-            await using var tx = await conn.BeginTransactionAsync();
+        publico.MapPost("/login", async (LoginDto d, FloraviaServicios s, TokenService tokens, HttpContext ctx) =>
+        {
             try
             {
-                var idUsuario = await conn.ExecuteScalarAsync<int>(
-                    "INSERT INTO usuario (correo, password_hash, rol) VALUES (@correo, @hash, 'CLIENTE') RETURNING id_usuario",
-                    new { correo, hash }, tx);
-                var idCliente = await conn.ExecuteScalarAsync<int>(
-                    @"INSERT INTO cliente (id_usuario, cedula, nombres, apellidos, telefono)
-                      VALUES (@idUsuario, @cedula, @nombres, @apellidos, @telefono) RETURNING id_cliente",
-                    new { idUsuario, cedula = d.Cedula, nombres = d.Nombres.Trim(),
-                          apellidos = d.Apellidos.Trim(), telefono = d.Telefono.Trim() }, tx);
-                await tx.CommitAsync();
-
-                var (token, expira) = tokens.Crear(idUsuario, correo, Roles.Cliente, idCliente);
-                return Results.Created("/api/auth/login", new { token, expiraEn = expira, rol = Roles.Cliente });
+                var sesion = await s.Cuenta.IniciarSesionAsync(d.Correo, d.Password, ctx.Connection.RemoteIpAddress?.ToString());
+                var (token, expira) = tokens.Crear(sesion.IdUsuario, sesion.Correo, sesion.Rol, sesion.IdCliente, sesion.IdAdmin);
+                return Results.Ok(new SesionDto(token, expira, sesion.Rol, sesion.Nombre));
             }
-            catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+            catch (ReglaNegocioException e)
             {
-                return Results.Conflict(new { error = "El correo o la cédula ya están registrados" });
+                return Results.Problem(statusCode: StatusCodes.Status401Unauthorized, title: "No se pudo iniciar sesión", detail: e.Message);
             }
         });
 
-        g.MapPost("/login", async (LoginDto d, NpgsqlDataSource db, TokenService tokens, HttpContext ctx) =>
+        // Responde SIEMPRE lo mismo exista o no el correo: no se puede usar para averiguar quién tiene cuenta.
+        publico.MapPost("/recuperar", async (
+            RecuperarDto d, FloraviaServicios s, IServicioCorreo correo, IConfiguration cfg,
+            HttpContext ctx, ILogger<Program> log, CancellationToken ct) =>
         {
-            var correo = (d.Correo ?? "").Trim().ToLowerInvariant();
-            await using var conn = await db.OpenConnectionAsync();
-
-            var u = await conn.QuerySingleOrDefaultAsync<Usuario>(
-                @"SELECT *, (bloqueado_hasta IS NOT NULL AND bloqueado_hasta > NOW()) AS bloqueado_temporalmente
-                  FROM usuario WHERE correo = @correo", new { correo });
-
-            if (u is null)
+            var destino = (d.Correo ?? "").Trim();
+            var token = await s.Cuenta.SolicitarRecuperacionAsync(destino, ctx.Connection.RemoteIpAddress?.ToString());
+            if (token is not null)
             {
-                BCrypt.Net.BCrypt.Verify(d.Password ?? "", HashFalso);   // iguala tiempos de respuesta
-                return Invalidas();
+                var enlace = $"{(cfg["Frontend:Url"] ?? "http://localhost:5173").TrimEnd('/')}/restablecer?token={WebUtility.UrlEncode(token)}";
+                var cuerpo = $"<p>Recibimos una solicitud para restablecer tu contraseña de Floravia.</p>" +
+                             $"<p><a href=\"{enlace}\">Crear una contraseña nueva</a></p>" +
+                             "<p>El enlace vence en 1 hora. Si no fuiste tú, ignora este mensaje.</p>";
+                try { await correo.EnviarAsync(destino, "Recupera tu contraseña de Floravia", cuerpo, ct); }
+                catch (Exception e) { log.LogError(e, "No se pudo enviar el correo de recuperación."); }
             }
-            if (u.BloqueadoTemporalmente)
-                return Results.Json(new { error = "Cuenta bloqueada temporalmente. Intenta más tarde." },
-                                    statusCode: StatusCodes.Status423Locked);
-            if (u.Estado != EstadoRegistro.Activo)
-                return Results.Json(new { error = "Cuenta no disponible" }, statusCode: StatusCodes.Status403Forbidden);
-
-            if (!BCrypt.Net.BCrypt.Verify(d.Password ?? "", u.PasswordHash))
-            {
-                var max = await ParamInt(conn, "MAX_INTENTOS_LOGIN", 5);
-                var minutos = await ParamInt(conn, "MINUTOS_BLOQUEO_LOGIN", 15);
-                await conn.ExecuteAsync(
-                    @"UPDATE usuario SET
-                        bloqueado_hasta   = CASE WHEN intentos_fallidos + 1 >= @max
-                                                 THEN NOW() + make_interval(mins => @minutos) ELSE bloqueado_hasta END,
-                        intentos_fallidos = CASE WHEN intentos_fallidos + 1 >= @max THEN 0 ELSE intentos_fallidos + 1 END
-                      WHERE id_usuario = @id", new { max, minutos, id = u.IdUsuario });
-                await Auditar(conn, u.IdUsuario, "LOGIN_FALLIDO", ctx);
-                return Invalidas();
-            }
-
-            await conn.ExecuteAsync(
-                "UPDATE usuario SET intentos_fallidos = 0, bloqueado_hasta = NULL, ultimo_acceso = NOW() WHERE id_usuario = @id",
-                new { id = u.IdUsuario });
-            int? idCliente = u.Rol == Roles.Cliente
-                ? await conn.ExecuteScalarAsync<int?>("SELECT id_cliente FROM cliente WHERE id_usuario = @id", new { id = u.IdUsuario })
-                : null;
-            await Auditar(conn, u.IdUsuario, "LOGIN", ctx);
-
-            var (token, expira) = tokens.Crear(u.IdUsuario, u.Correo, u.Rol, idCliente);
-            return Results.Ok(new { token, expiraEn = expira, rol = u.Rol });
+            return Results.Accepted(value: new { mensaje = "Si el correo está registrado, te enviamos un enlace para restablecer tu contraseña." });
         });
+
+        publico.MapPost("/restablecer", async (RestablecerDto d, FloraviaServicios s) =>
+        {
+            await s.Cuenta.RestablecerPasswordAsync(d.Token, d.Password);
+            return Results.Ok(new { mensaje = "Contraseña actualizada. Ya puedes iniciar sesión." });
+        });
+
+        // Estas dos exigen sesión (por eso NO están en el grupo anónimo).
+        app.MapGet("/api/auth/me", (ClaimsPrincipal u) => Results.Ok(new
+        {
+            idUsuario = u.IdUsuario(),
+            correo = u.FindFirst("email")?.Value,
+            rol = u.FindFirst("role")?.Value,
+            idCliente = u.IdClienteOpcional(),
+            esAdmin = u.IsInRole(Roles.Admin),
+        })).WithTags("Autenticación");
+
+        app.MapPost("/api/auth/cambiar-password", async (CambiarPasswordDto d, ClaimsPrincipal u, FloraviaServicios s) =>
+        {
+            await s.Cuenta.CambiarPasswordAsync(u.IdUsuario(), d.PasswordActual, d.PasswordNueva);
+            return Results.NoContent();
+        }).RequireRateLimiting("estricta").WithTags("Autenticación");
     }
-
-    private static IResult Invalidas() =>
-        Results.Json(new { error = "Credenciales inválidas" }, statusCode: StatusCodes.Status401Unauthorized);
-
-    private static async Task<int> ParamInt(NpgsqlConnection c, string clave, int porDefecto) =>
-        int.TryParse(await c.ExecuteScalarAsync<string?>("SELECT valor FROM parametro WHERE clave = @clave", new { clave }), out var v)
-            ? v : porDefecto;
-
-    private static Task Auditar(NpgsqlConnection c, int idUsuario, string accion, HttpContext ctx) =>
-        c.ExecuteAsync(
-            "INSERT INTO auditoria (id_usuario, accion, entidad, ip) VALUES (@idUsuario, @accion, 'usuario', @ip)",
-            new { idUsuario, accion, ip = ctx.Connection.RemoteIpAddress?.ToString() });
 }

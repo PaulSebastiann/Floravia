@@ -15,6 +15,10 @@ public sealed class BaseDatosFixture : IAsyncLifetime
     public const string PasswordPrueba = "Clave1234";
 
     public FloraviaServicios S { get; private set; } = null!;
+    public string Conexion { get; private set; } = "";
+
+    /// <summary>La API real en memoria, apuntando a esta misma base de pruebas (el servidor arranca al primer uso).</summary>
+    public ApiFactory Api { get; private set; } = null!;
     public string CarpetaImagenes { get; } =
         Path.Combine(Path.GetTempPath(), "floravia_test_" + Guid.NewGuid().ToString("N"));
 
@@ -54,6 +58,8 @@ public sealed class BaseDatosFixture : IAsyncLifetime
         }
 
         S = new FloraviaServicios(b.ConnectionString, new AlmacenLocal(CarpetaImagenes));
+        Conexion = b.ConnectionString;
+        Api = new ApiFactory(Conexion, CarpetaImagenes + "_api");
     }
 
     /// <summary>Sube desde la carpeta de salida hasta encontrar database/01_schema.sql en la raíz del repositorio.</summary>
@@ -69,8 +75,12 @@ public sealed class BaseDatosFixture : IAsyncLifetime
 
     public Task DisposeAsync()
     {
-        try { if (Directory.Exists(CarpetaImagenes)) Directory.Delete(CarpetaImagenes, recursive: true); }
-        catch { /* limpieza best-effort */ }
+        Api?.Dispose();
+        foreach (var carpeta in new[] { CarpetaImagenes, CarpetaImagenes + "_api" })
+        {
+            try { if (Directory.Exists(carpeta)) Directory.Delete(carpeta, recursive: true); }
+            catch { /* limpieza best-effort */ }
+        }
         return Task.CompletedTask;
     }
 

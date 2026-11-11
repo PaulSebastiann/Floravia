@@ -1,0 +1,11 @@
+**/bin
+**/obj
+**/almacen
+.git
+.github
+.vs
+.idea
+tests
+database
+*.md
+.env

@@ -19,6 +19,7 @@ public sealed class FloraviaServicios
     public CuentaMD Cuenta { get; }
     public DireccionMD Direcciones { get; }
     public PedidoMD Pedidos { get; }
+    public PagoTarjetaMD PagosTarjeta { get; }
 
     // ----- Admin (/admin) -----
     public ProductoAdminMD Productos { get; }
@@ -77,6 +78,7 @@ public sealed class FloraviaServicios
         CategoriasYColores = new CatalogoAdminMD(categoriaDP, colorDP);
         Configuracion = new ConfiguracionAdminMD(zonaDP, proveedorDP);
         PedidosAdmin = new PedidoAdminMD(Db, pedidoDP, pagoDP, entregaDP, reservaDP, Stock);
+        PagosTarjeta = new PagoTarjetaMD(Db, Pedidos, PedidosAdmin);
         Usuarios = new UsuariosAdminMD(Db, usuarioDP, adminDP, clienteDP);
         Dashboard = new DashboardMD(dashboardDP, productoDP);
     }

@@ -1,9 +1,11 @@
 # Floravia - infraestructura local y de produccion
 # Uso:
-#   docker compose up -d          -> levanta la base de datos
-#   docker compose --profile dev up -d   -> ademas levanta Adminer (panel web de la BD)
-#   docker compose down           -> detiene (los datos se conservan en el volumen)
-#   docker compose down -v        -> detiene y BORRA los datos
+#   docker compose up -d db                 -> solo la base de datos (para desarrollar con "dotnet run")
+#   docker compose up -d --build            -> base de datos + API
+#   docker compose --profile dev up -d      -> ademas levanta Adminer (panel web de la BD)
+#   docker compose down                     -> detiene (los datos se conservan en el volumen)
+#   docker compose down -v                  -> detiene y BORRA los datos
+# Las variables se leen del archivo .env (copia .env.example).
 
 services:
   db:
@@ -21,12 +23,60 @@ services:
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - floravia_pgdata:/var/lib/postgresql/data   # persistencia de datos
+      # El esquema se aplica SOLO la primera vez (cuando el volumen esta vacio). Contiene DROP SCHEMA:
+      # por eso nunca se vuelve a ejecutar solo sobre una base con datos.
+      - ./database/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-floravia_user} -d ${POSTGRES_DB:-floravia}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - floravia_net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    image: floravia-api
+    container_name: floravia-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # Si la clave de la BD tiene ; o = usa comillas dobles dentro de la cadena de conexion.
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-floravia};Username=${POSTGRES_USER:-floravia_user};Password=${POSTGRES_PASSWORD}"
+      Jwt__Key: ${JWT_KEY:?Define JWT_KEY (minimo 32 caracteres) en el archivo .env}
+      Cors__Origins__0: ${FRONTEND_URL:-http://localhost:5173}
+      Frontend__Url: ${FRONTEND_URL:-http://localhost:5173}
+      Admin__Correo: ${ADMIN_CORREO:-}
+      Admin__Password: ${ADMIN_PASSWORD:-}
+      Pagos__Transferencia__Banco: ${PAGO_BANCO:-}
+      Pagos__Transferencia__TipoCuenta: ${PAGO_TIPO_CUENTA:-}
+      Pagos__Transferencia__NumeroCuenta: ${PAGO_NUMERO_CUENTA:-}
+      Pagos__Transferencia__Titular: ${PAGO_TITULAR:-}
+      Pagos__Transferencia__Identificacion: ${PAGO_IDENTIFICACION:-}
+      Smtp__Host: ${SMTP_HOST:-}
+      Smtp__Puerto: ${SMTP_PUERTO:-587}
+      Smtp__Usuario: ${SMTP_USUARIO:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__Remitente: ${SMTP_REMITENTE:-}
+      # Descomenta SOLO si pones la API detras de un proxy inverso (nginx, Caddy, Traefik) que envia
+      # X-Forwarded-For: asi el limite de peticiones y la auditoria ven la IP real del cliente.
+      # ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+    ports:
+      # Solo local: expon la API a internet a traves de un proxy inverso con HTTPS.
+      - "127.0.0.1:${API_PORT:-8081}:8080"
+    volumes:
+      - floravia_media:/data        # fotos de productos y comprobantes de pago
     networks:
       - floravia_net
     logging:
@@ -51,6 +101,7 @@ services:
 
 volumes:
   floravia_pgdata:
+  floravia_media:
 
 networks:
   floravia_net:

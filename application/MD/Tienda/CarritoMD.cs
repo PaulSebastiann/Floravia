@@ -26,7 +26,8 @@ public sealed class CarritoMD(Db db, CarritoDP carritos, ProductoDP productos, P
         }
     }
 
-    private Task<Carrito?> BuscarActivoAsync(int? idCliente, string? tokenSesion) =>
+    /// <summary>Busca el carrito activo SIN crearlo (para consultar o para vistas vacías).</summary>
+    public Task<Carrito?> BuscarActivoAsync(int? idCliente, string? tokenSesion) =>
         idCliente is int c
             ? carritos.ObtenerActivoPorClienteAsync(c)
             : carritos.ObtenerActivoPorTokenAsync(tokenSesion!);
