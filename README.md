@@ -1,6 +1,22 @@
 # 🌿 Floravia
 
-Plataforma e-commerce de plantas, flores, bonsáis y semillas. Este repositorio contiene el **backend**: una API REST en C# / ASP.NET Core sobre PostgreSQL, lista para desplegarse con Docker.
+Plataforma e-commerce de plantas, flores, bonsáis y semillas. Este repositorio contiene el **frontend Next.js** y el **backend**: una API REST en C# / ASP.NET Core sobre PostgreSQL, lista para desplegarse con Docker.
+
+## 🌐 Frontend web
+
+Requisitos: Node.js 20.9 o superior.
+
+```bash
+npm ci
+npm run dev                  # http://localhost:3000
+npm run verify               # tipos, 32 pruebas y build de produccion
+```
+
+El frontend usa datos ficticios en memoria. La integracion con la API real todavia no esta conectada:
+
+- **Pendiente:** carrito, checkout, login/portal admin y adaptador HTTP.
+- **Reemplazar:** paleta en `src/styles/globals.css`, productos y precios en `src/infrastructure/mocks/datos-productos.ts`, y datos comerciales en `src/content/sitio.ts`.
+- **Docker completo:** `docker compose up -d --build` levanta la base de datos, API y web.
 
 ## 🧱 Arquitectura
 

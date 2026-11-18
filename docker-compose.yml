@@ -55,8 +55,8 @@ services:
       # Si la clave de la BD tiene ; o = usa comillas dobles dentro de la cadena de conexion.
       ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-floravia};Username=${POSTGRES_USER:-floravia_user};Password=${POSTGRES_PASSWORD}"
       Jwt__Key: ${JWT_KEY:?Define JWT_KEY (minimo 32 caracteres) en el archivo .env}
-      Cors__Origins__0: ${FRONTEND_URL:-http://localhost:5173}
-      Frontend__Url: ${FRONTEND_URL:-http://localhost:5173}
+      Cors__Origins__0: ${FRONTEND_URL:-http://localhost:3000}
+      Frontend__Url: ${FRONTEND_URL:-http://localhost:3000}
       Admin__Correo: ${ADMIN_CORREO:-}
       Admin__Password: ${ADMIN_PASSWORD:-}
       Pagos__Transferencia__Banco: ${PAGO_BANCO:-}
@@ -84,6 +84,24 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: floravia-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      NEXT_PUBLIC_SITE_URL: ${FRONTEND_URL:-http://localhost:3000}
+      NEXT_PUBLIC_WHATSAPP: ${NEXT_PUBLIC_WHATSAPP:-5930000000000}
+      FLORAVIA_API_URL: ${FLORAVIA_API_URL:-}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    networks:
+      - floravia_net
 
   # Panel web opcional para ver tablas (solo desarrollo)
   adminer:

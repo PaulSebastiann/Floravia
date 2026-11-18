@@ -1,0 +1,104 @@
+@import "tailwindcss";
+@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/inter";
+
+/*
+ * TOKENS DE DISEÑO — PROVISIONALES.
+ * No se pudo leer src/styles.css de Floravia-Version-0.0. Reemplaza los valores
+ * de estas variables por la paleta real; el resto del codigo solo usa los nombres.
+ */
+@theme {
+  --font-display: "Fraunces Variable", ui-serif, Georgia, serif;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-moss-50: #f1f6ef;
+  --color-moss-100: #e0ebdb;
+  --color-moss-200: #c4d9bd;
+  --color-moss-300: #9dc093;
+  --color-moss-500: #5b8c52;
+  --color-moss-600: #3f7440;
+  --color-moss-700: #2f5d3a;
+  --color-moss-800: #244a2e;
+  --color-moss-900: #1a3622;
+
+  --color-cream-50: #fdfbf6;
+  --color-cream-100: #f8f3e8;
+  --color-cream-200: #efe6d2;
+
+  --color-petal-100: #fbe9e7;
+  --color-petal-200: #f6cfcc;
+  --color-petal-400: #e8938f;
+  --color-petal-700: #a63f45;
+
+  --color-sun-100: #fbf1d4;
+  --color-sun-500: #e0a93b;
+  --color-sun-800: #7a5410;
+
+  --color-clay-500: #b4694a;
+
+  --color-ink: #1f2a22;
+  --color-muted: #55605a;
+  --color-line: #e3dccb;
+
+  --radius-card: 1.25rem;
+  --shadow-soft: 0 10px 30px -14px rgb(26 54 34 / 0.35);
+  --shadow-lift: 0 18px 40px -16px rgb(26 54 34 / 0.45);
+
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 0.3s ease-out both;
+  --animate-sway: sway 6s ease-in-out infinite;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes sway {
+    0%, 100% { transform: rotate(-1.5deg); }
+    50% { transform: rotate(1.5deg); }
+  }
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background-color: var(--color-cream-50);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    text-rendering: optimizeLegibility;
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-moss-600);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+  ::selection {
+    background: var(--color-moss-200);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+}

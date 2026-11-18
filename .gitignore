@@ -429,3 +429,13 @@ FodyWeavers.xsd
 
 # Archivos subidos en desarrollo (fotos y comprobantes)
 **/almacen/
+
+# Frontend Next.js
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+.env.local
+coverage/
+AGENTS.md
