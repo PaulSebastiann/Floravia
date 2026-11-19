@@ -5,7 +5,7 @@ namespace Floravia.Application.MD.Admin;
 
 /// <summary>Gestión de pedidos desde /admin: revisar pagos, preparar, enviar y entregar.</summary>
 public sealed class PedidoAdminMD(
-    Db db, PedidoDP pedidos, PagoDP pagos, EntregaDP entregas, ReservaDP reservas, StockMD stock)
+    Db db, PedidoDP pedidos, PagoDP pagos, EntregaDP entregas, StockMD stock)
 {
     // Flujo permitido de un pedido ya pagado
     private static readonly Dictionary<string, string> Siguiente = new()

@@ -255,6 +255,14 @@ public sealed class ReservaDP(Db db)
             "SELECT EXISTS (SELECT 1 FROM reserva_stock WHERE id_pedido = @idPedido AND estado = 'ACTIVA' AND expira_en > NOW())",
             new { idPedido });
 
+    /// <summary>Da tiempo al administrador para revisar un comprobante sin liberar stock ya comprometido.</summary>
+    public Task<int> ExtenderAsync(int idPedido, int horas) =>
+        db.EjecutarAsync("""
+            UPDATE reserva_stock
+               SET expira_en = GREATEST(expira_en, NOW() + make_interval(hours => @horas))
+             WHERE id_pedido = @idPedido AND estado = 'ACTIVA'
+            """, new { idPedido, horas });
+
     public Task<int> CambiarEstadoPorPedidoAsync(int idPedido, string desde, string hacia) =>
         db.EjecutarAsync(
             "UPDATE reserva_stock SET estado = @hacia WHERE id_pedido = @idPedido AND estado = @desde",

@@ -117,7 +117,7 @@ export class HttpProductoRepositorio implements ProductoRepositorio {
     if (c.linea && idCategoria === undefined) return { items: [], total: 0, pagina: 1, totalPaginas: 1 };
 
     const r = await apiFetch<PaginaProductosDto>('/api/productos', {
-      revalidar: 30, signal,
+      revalidar: 0, signal,
       query: { idCategoria, texto: c.q, orden: ORDEN_API[c.orden], pagina: c.pagina, tamanoPagina: TAMANO_PAGINA },
     });
     const items = r.datos.items.map((p) => mapear(p, mapa)).filter((p): p is Producto => p !== null);
@@ -130,7 +130,7 @@ export class HttpProductoRepositorio implements ProductoRepositorio {
     try {
       const [mapa, r] = await Promise.all([
         categorias(),
-        apiFetch<ProductoDetallePublicoDto>(`/api/productos/${id}`, { revalidar: 30, signal }),
+        apiFetch<ProductoDetallePublicoDto>(`/api/productos/${id}`, { revalidar: 0, signal }),
       ]);
       const p = mapear(r.datos.producto, mapa, r.datos);
       return p; // el id decide; un slug desactualizado (nombre cambiado) sigue resolviendo
@@ -158,7 +158,7 @@ export class HttpProductoRepositorio implements ProductoRepositorio {
     const [mapa, r] = await Promise.all([
       categorias(),
       apiFetch<ProductoPublicoDto[]>(`/api/productos/${producto.idProducto}/relacionados`, {
-        revalidar: 60, signal, query: { cantidad: limite },
+        revalidar: 0, signal, query: { cantidad: limite },
       }),
     ]);
     return r.datos.map((p) => mapear(p, mapa)).filter((p): p is Producto => p !== null);
@@ -171,7 +171,7 @@ export class HttpProductoRepositorio implements ProductoRepositorio {
   async sugerir(termino: string, limite: number, signal?: AbortSignal): Promise<readonly Sugerencia[]> {
     const mapa = await categorias();
     const r = await apiFetch<PaginaProductosDto>('/api/productos', {
-      revalidar: 30, signal, query: { texto: termino, orden: 'nombre', pagina: 1, tamanoPagina: limite },
+      revalidar: 0, signal, query: { texto: termino, orden: 'nombre', pagina: 1, tamanoPagina: limite },
     });
     return r.datos.items.flatMap((p) => {
       const linea = mapa.lineaPorCategoria.get(p.idCategoria);

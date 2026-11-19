@@ -17,7 +17,7 @@ export function aCentavos(n: number): Centavos {
 /** Las rutas de imagen de la API son relativas al almacen: se sirven bajo /media/ (rewrite de Next hacia la API). */
 export const urlMedia = (ruta: string | null | undefined): string | undefined => {
   if (!ruta) return undefined;
-  if (ruta.startsWith('http') || ruta.startsWith('/media/')) return ruta;
+  if (ruta.startsWith('http') || ruta.startsWith('/media/') || ruta.startsWith('/images/')) return ruta;
   return `/media/${ruta.replace(/^\/+/, '')}`;
 };
 

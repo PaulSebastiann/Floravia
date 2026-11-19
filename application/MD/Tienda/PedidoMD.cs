@@ -127,6 +127,9 @@ public sealed class PedidoMD(
                     RutaComprobante = rutaComprobante,
                 });
 
+                if (metodo == MetodoPago.Transferencia)
+                    await reservas.ExtenderAsync(idPedido, await parametros.HorasRevisionTransferenciaAsync());
+
                 if (pedido.Estado == EstadoPedido.PagoFallido)
                     await pedidos.CambiarEstadoAsync(idPedido, EstadoPedido.PendientePago, EstadoPedido.PagoFallido);
 

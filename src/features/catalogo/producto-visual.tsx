@@ -10,6 +10,13 @@ const HEX_COLOR: Record<ColorFlor, string> = {
 const MULTI = ['#c4575a', '#f3c969', '#8a63b5', '#e8863a'];
 const SOBRE: Record<string, string> = { flores: '#e8938f', huerto: '#5b8c52', aromaticas: '#8a63b5' };
 
+function colorSobreSemilla(p: Producto): string {
+  const nombre = p.nombre.toLowerCase();
+  if (/(albahaca|cilantro|menta)/.test(nombre)) return SOBRE['aromaticas']!;
+  if (/(lechuga|tomate)/.test(nombre)) return SOBRE['huerto']!;
+  return SOBRE['flores']!;
+}
+
 /** Heuristica solo para la ilustracion de respaldo; desaparece cuando haya fotos. */
 function varianteDe(p: Planta) {
   const riego = p.riegoCadaDias ?? 0;
@@ -25,8 +32,9 @@ export function ProductoVisual({ producto, className }: { producto: Producto; cl
     // eslint-disable-next-line @next/next/no-img-element -- origen = API/medios del backend, aun sin remotePatterns
     return <img src={foto.url} alt={foto.alt} loading="lazy" className={className ?? 'h-full w-full object-cover'} />;
   }
-  // Producto REAL (viene de la API) sin foto cargada: marcador neutro. Nunca una ilustracion que parezca la foto del producto.
-  if (producto.fuente === 'api') {
+  // Ramos y plantas reales sin foto muestran un marcador. Para semillas recuperamos el
+  // sobre ilustrado original: es claramente una representación, no una foto engañosa.
+  if (producto.fuente === 'api' && producto.linea !== 'semillas') {
     return (
       <div role="img" aria-label={`${producto.nombre}: foto próximamente`}
         className={cn('flex h-full w-full flex-col items-center justify-center gap-2 bg-cream-100 text-moss-500', className)}>
@@ -45,7 +53,7 @@ export function ProductoVisual({ producto, className }: { producto: Producto; cl
       return <BotanicalArt forma="planta" semilla={producto.id} variante={varianteDe(producto)} etiqueta={producto.nombre} className={className} />;
     case 'semillas':
       return (
-        <BotanicalArt forma="sobre" semilla={producto.id} colores={[SOBRE[producto.cultivo ?? ''] ?? '#e0a93b']} etiqueta={producto.nombre} className={className} />
+        <BotanicalArt forma="sobre" semilla={producto.id} colores={[colorSobreSemilla(producto)]} etiqueta={producto.nombre} className={className} />
       );
   }
 }

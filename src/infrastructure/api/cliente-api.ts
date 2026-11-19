@@ -37,7 +37,6 @@ async function ipCliente(): Promise<string | undefined> {
 
 export async function apiFetch<T>(ruta: string, o: OpcionesApi = {}): Promise<RespuestaApi<T>> {
   const base = urlApi();
-  if (!base) throw new ApiNoDisponible('FLORAVIA_API_URL no configurada');
 
   const url = new URL(base + ruta);
   for (const [k, v] of Object.entries(o.query ?? {})) {

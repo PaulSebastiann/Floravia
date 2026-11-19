@@ -29,7 +29,13 @@ public static class Mapeos
     /// <summary>Las imágenes se sirven como archivos estáticos bajo /media.</summary>
     public const string PrefijoMedia = "/media/";
 
-    public static string? UrlImagen(string? ruta) => string.IsNullOrEmpty(ruta) ? null : PrefijoMedia + ruta;
+    public static string? UrlImagen(string? ruta)
+    {
+        if (string.IsNullOrWhiteSpace(ruta)) return null;
+        // Las imágenes del catálogo inicial ya viven en public/images del frontend.
+        // Las que sube un administrador son rutas relativas del almacén de la API.
+        return ruta.StartsWith('/') ? ruta : PrefijoMedia + ruta;
+    }
 
     public static ProductoPublico Publico(Producto p) => new(
         p.IdProducto, p.IdCategoria, p.Codigo, p.Nombre, p.Descripcion, p.Cuidados,
@@ -40,7 +46,7 @@ public static class Mapeos
 
     public static ProductoDetallePublico Publico(ProductoDetalle d) => new(
         Publico(d.Producto),
-        d.Imagenes.Select(i => new ImagenPublica(i.IdImagen, PrefijoMedia + i.Ruta, i.EsPrincipal, i.Orden)).ToList(),
+        d.Imagenes.Select(i => new ImagenPublica(i.IdImagen, UrlImagen(i.Ruta)!, i.EsPrincipal, i.Orden)).ToList(),
         d.Colores);
 
     public static FiltroProducto Filtro(ProductosQuery q) => new()

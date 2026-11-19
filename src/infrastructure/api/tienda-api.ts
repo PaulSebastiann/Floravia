@@ -2,7 +2,6 @@ import 'server-only';
 import { CARRITO_VACIO, type Carrito } from '@/domain/carrito';
 import type { Cliente, Direccion, MetodosPago, ZonaEntrega } from '@/domain/cuenta';
 import type { Pedido, ResumenPedido } from '@/domain/pedido';
-import { hayApi } from './config';
 import { apiFetch } from './cliente-api';
 import type {
   CarritoRespuestaDto, CarritoVistaDto, ClienteDto, DireccionDto, MetodosPagoDto, PagoTarjetaRespuestaDto,
@@ -28,7 +27,6 @@ async function dueno() {
 // ───────────── Carrito ─────────────
 
 export async function verCarrito(): Promise<Carrito> {
-  if (!hayApi()) return CARRITO_VACIO;
   const d = await dueno();
   if (!d.jwt && !d.tokenCarrito) return CARRITO_VACIO; // sin dueno no hay carrito: ahorra un viaje
   const r = await apiFetch<CarritoVistaDto>('/api/carrito', d);

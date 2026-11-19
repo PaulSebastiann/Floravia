@@ -73,6 +73,7 @@ public static class Parametros
 {
     public const string IvaPorcentaje = "IVA_PORCENTAJE";
     public const string ReservaStockMinutos = "RESERVA_STOCK_MINUTOS";
+    public const string RevisionTransferenciaHoras = "REVISION_TRANSFERENCIA_HORAS";
     public const string MaxIntentosLogin = "MAX_INTENTOS_LOGIN";
     public const string MinutosBloqueoLogin = "MINUTOS_BLOQUEO_LOGIN";
 }

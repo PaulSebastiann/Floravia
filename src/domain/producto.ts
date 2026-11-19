@@ -19,7 +19,7 @@ export interface Imagen {
 
 interface ProductoBase {
   readonly id: string;
-  /** Id numerico con el que se compra (API real o, en la demostracion, posicion en el catalogo de muestra). */
+  /** Id numérico real de PostgreSQL con el que se compra. */
   readonly idProducto?: number;
   readonly slug: string;
   readonly nombre: string;

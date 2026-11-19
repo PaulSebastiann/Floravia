@@ -12,11 +12,10 @@ npm run dev                  # http://localhost:3000
 npm run verify               # tipos, 32 pruebas y build de produccion
 ```
 
-El frontend usa datos ficticios en memoria. La integracion con la API real todavia no esta conectada:
-
-- **Pendiente:** carrito, checkout, login/portal admin y adaptador HTTP.
-- **Reemplazar:** paleta en `src/styles/globals.css`, productos y precios en `src/infrastructure/mocks/datos-productos.ts`, y datos comerciales en `src/content/sitio.ts`.
-- **Docker completo:** `docker compose up -d --build` levanta la base de datos, API y web.
+El frontend consume exclusivamente la API real: catálogo, precios, stock, carrito, cuentas y
+pedidos se guardan en PostgreSQL. Si falta `FLORAVIA_API_URL`, la aplicación falla explícitamente;
+no existe una caída silenciosa a datos demo. El catálogo inicial de 26 productos se aplica de forma
+idempotente en cada despliegue mediante `database/02_catalogo_tienda.sql`.
 
 ## 🧱 Arquitectura
 
@@ -39,6 +38,9 @@ Regla de oro: **la API nunca habla con la base de datos**; solo llama a `Floravi
 cp .env.example .env                 # y completa POSTGRES_PASSWORD
 docker compose up -d db              # PostgreSQL con el esquema ya aplicado
 
+# Si el volumen de PostgreSQL ya existía antes de incorporar el catálogo, ejecútalo una vez:
+docker compose exec -T db psql -U floravia_user -d floravia -f /docker-entrypoint-initdb.d/02_catalogo_tienda.sql
+
 cd api
 dotnet user-secrets set "ConnectionStrings:Default" "Host=localhost;Port=5432;Database=floravia;Username=floravia_user;Password=TU_CLAVE"
 dotnet user-secrets set "Admin:Correo" "admin@floravia.local"      # primer administrador
@@ -46,14 +48,18 @@ dotnet user-secrets set "Admin:Password" "Admin12345"
 dotnet run                           # http://localhost:5071  (prueba con api/Api.http)
 ```
 
-### Todo con Docker (base de datos + API)
+### Stack de preproducción completo
 
 ```bash
-cp .env.example .env                 # completa POSTGRES_PASSWORD, JWT_KEY (openssl rand -base64 48) y ADMIN_*
-docker compose up -d --build         # API en http://127.0.0.1:8081
+cp .env.example .env
+# Completa como mínimo POSTGRES_PASSWORD, JWT_KEY, FRONTEND_URL, ADMIN_* y los datos PAGO_*.
+docker compose config                # valida variables antes de tocar contenedores
+docker compose up -d --build
+docker compose ps                    # db, api y web deben quedar healthy/running
 ```
 
-En producción pon un proxy inverso con HTTPS (Caddy, nginx, Traefik) delante de la API y activa `ASPNETCORE_FORWARDEDHEADERS_ENABLED` en `docker-compose.yml`.
+Publica únicamente el puerto web detrás de un proxy inverso con HTTPS (Caddy, nginx o Traefik).
+PostgreSQL y la API quedan enlazados solo a `127.0.0.1` y a la red interna de Docker.
 
 ## ⚙️ Configuración
 

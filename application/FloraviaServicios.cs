@@ -77,7 +77,7 @@ public sealed class FloraviaServicios
         Inventario = new InventarioAdminMD(Db, productoDP, movimientoDP, proveedorDP);
         CategoriasYColores = new CatalogoAdminMD(categoriaDP, colorDP);
         Configuracion = new ConfiguracionAdminMD(zonaDP, proveedorDP);
-        PedidosAdmin = new PedidoAdminMD(Db, pedidoDP, pagoDP, entregaDP, reservaDP, Stock);
+        PedidosAdmin = new PedidoAdminMD(Db, pedidoDP, pagoDP, entregaDP, Stock);
         PagosTarjeta = new PagoTarjetaMD(Db, Pedidos, PedidosAdmin);
         Usuarios = new UsuariosAdminMD(Db, usuarioDP, adminDP, clienteDP);
         Dashboard = new DashboardMD(dashboardDP, productoDP);

@@ -1,7 +1,7 @@
-# Floravia - infraestructura local y de produccion
+# Floravia - stack de preproducción/producción
 # Uso:
 #   docker compose up -d db                 -> solo la base de datos (para desarrollar con "dotnet run")
-#   docker compose up -d --build            -> base de datos + API
+#   docker compose up -d --build            -> PostgreSQL + catálogo + API + web optimizada
 #   docker compose --profile dev up -d      -> ademas levanta Adminer (panel web de la BD)
 #   docker compose down                     -> detiene (los datos se conservan en el volumen)
 #   docker compose down -v                  -> detiene y BORRA los datos
@@ -26,6 +26,8 @@ services:
       # El esquema se aplica SOLO la primera vez (cuando el volumen esta vacio). Contiene DROP SCHEMA:
       # por eso nunca se vuelve a ejecutar solo sobre una base con datos.
       - ./database/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      # Catálogo real que consume el frontend (26 productos con precio y stock inicial).
+      - ./database/02_catalogo_tienda.sql:/docker-entrypoint-initdb.d/02_catalogo_tienda.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-floravia_user} -d ${POSTGRES_DB:-floravia}"]
       interval: 10s
@@ -40,6 +42,33 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Migración de datos idempotente. Corre en cada despliegue y termina antes de
+  # arrancar la API; conserva stock, usuarios, pedidos y movimientos existentes.
+  catalogo:
+    image: postgres:17-alpine
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en el archivo .env}
+    volumes:
+      - ./database/02_catalogo_tienda.sql:/migraciones/02_catalogo_tienda.sql:ro
+    command:
+      - psql
+      - -v
+      - ON_ERROR_STOP=1
+      - -h
+      - db
+      - -U
+      - ${POSTGRES_USER:-floravia_user}
+      - -d
+      - ${POSTGRES_DB:-floravia}
+      - -f
+      - /migraciones/02_catalogo_tienda.sql
+    networks:
+      - floravia_net
+
   api:
     build:
       context: .
@@ -48,22 +77,22 @@ services:
     container_name: floravia-api
     restart: unless-stopped
     depends_on:
-      db:
-        condition: service_healthy
+      catalogo:
+        condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       # Si la clave de la BD tiene ; o = usa comillas dobles dentro de la cadena de conexion.
       ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-floravia};Username=${POSTGRES_USER:-floravia_user};Password=${POSTGRES_PASSWORD}"
       Jwt__Key: ${JWT_KEY:?Define JWT_KEY (minimo 32 caracteres) en el archivo .env}
-      Cors__Origins__0: ${FRONTEND_URL:-http://localhost:3000}
-      Frontend__Url: ${FRONTEND_URL:-http://localhost:3000}
-      Admin__Correo: ${ADMIN_CORREO:-}
-      Admin__Password: ${ADMIN_PASSWORD:-}
-      Pagos__Transferencia__Banco: ${PAGO_BANCO:-}
-      Pagos__Transferencia__TipoCuenta: ${PAGO_TIPO_CUENTA:-}
-      Pagos__Transferencia__NumeroCuenta: ${PAGO_NUMERO_CUENTA:-}
-      Pagos__Transferencia__Titular: ${PAGO_TITULAR:-}
-      Pagos__Transferencia__Identificacion: ${PAGO_IDENTIFICACION:-}
+      Cors__Origins__0: ${FRONTEND_URL:?Define FRONTEND_URL con la URL HTTPS publica}
+      Frontend__Url: ${FRONTEND_URL:?Define FRONTEND_URL con la URL HTTPS publica}
+      Admin__Correo: ${ADMIN_CORREO:?Define ADMIN_CORREO en el archivo .env}
+      Admin__Password: ${ADMIN_PASSWORD:?Define ADMIN_PASSWORD en el archivo .env}
+      Pagos__Transferencia__Banco: ${PAGO_BANCO:?Define PAGO_BANCO en el archivo .env}
+      Pagos__Transferencia__TipoCuenta: ${PAGO_TIPO_CUENTA:?Define PAGO_TIPO_CUENTA en el archivo .env}
+      Pagos__Transferencia__NumeroCuenta: ${PAGO_NUMERO_CUENTA:?Define PAGO_NUMERO_CUENTA en el archivo .env}
+      Pagos__Transferencia__Titular: ${PAGO_TITULAR:?Define PAGO_TITULAR en el archivo .env}
+      Pagos__Transferencia__Identificacion: ${PAGO_IDENTIFICACION:?Define PAGO_IDENTIFICACION en el archivo .env}
       Smtp__Host: ${SMTP_HOST:-}
       Smtp__Puerto: ${SMTP_PUERTO:-587}
       Smtp__Usuario: ${SMTP_USUARIO:-}
@@ -91,21 +120,31 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
+      args:
+        FLORAVIA_API_URL: http://api:8080
+        NEXT_PUBLIC_SITE_URL: ${FRONTEND_URL:?Define FRONTEND_URL con la URL HTTPS publica}
+        NEXT_PUBLIC_WHATSAPP: ${NEXT_PUBLIC_WHATSAPP:-5930000000000}
     container_name: floravia-web
     restart: unless-stopped
     depends_on:
       api:
         condition: service_started
     environment:
-      NEXT_PUBLIC_SITE_URL: ${FRONTEND_URL:-http://localhost:3000}
+      NEXT_PUBLIC_SITE_URL: ${FRONTEND_URL:?Define FRONTEND_URL con la URL HTTPS publica}
       NEXT_PUBLIC_WHATSAPP: ${NEXT_PUBLIC_WHATSAPP:-5930000000000}
-      # URL INTERNA de la API (red de Docker). Vacia = modo demostracion con datos de muestra y sin compra.
-      FLORAVIA_API_URL: ${FLORAVIA_API_URL:-http://api:8080}
+      # URL interna fija: no existe caída automática al catálogo/demo local.
+      FLORAVIA_API_URL: http://api:8080
       FLORAVIA_COOKIE_SECURE: ${FLORAVIA_COOKIE_SECURE:-}
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
     networks:
       - floravia_net
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/tienda/estado').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   # Panel web opcional para ver tablas (solo desarrollo)
   adminer:

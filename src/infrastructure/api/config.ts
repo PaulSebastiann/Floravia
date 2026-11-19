@@ -1,12 +1,15 @@
 import 'server-only';
 
-/** URL base de la API .NET. Vacia = modo demo (catalogo mock, sin compra). */
-export function urlApi(): string | undefined {
+/** URL interna obligatoria de la API .NET. La tienda real nunca cae a datos locales. */
+export function urlApi(): string {
   const u = process.env['FLORAVIA_API_URL']?.trim();
-  return u ? u.replace(/\/+$/, '') : undefined;
+  if (!u) {
+    throw new Error(
+      'Falta FLORAVIA_API_URL. Floravia requiere la API y PostgreSQL; el modo demo no está habilitado.',
+    );
+  }
+  return u.replace(/\/+$/, '');
 }
-
-export const hayApi = (): boolean => urlApi() !== undefined;
 
 /** En produccion las cookies van `Secure`. Desactivable solo para HTTP en red interna de pruebas. */
 export function cookiesSeguras(): boolean {

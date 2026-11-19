@@ -128,6 +128,10 @@ public class PedidosTests(BaseDatosFixture f)
         var pago = await f.S.Pedidos.RegistrarPagoAsync(c.IdCliente, pedido.IdPedido, MetodoPago.Transferencia, "REF-1", "comprobantes/a.jpg");
         Assert.Equal(EstadoPago.Pendiente, pago.Estado);
         Assert.Equal(pedido.Total, pago.Monto);
+        Assert.True(await f.S.Db.EscalarAsync<bool>("""
+            SELECT MIN(expira_en) > NOW() + interval '47 hours'
+              FROM reserva_stock WHERE id_pedido = @id
+            """, new { id = pedido.IdPedido }));
         Assert.Contains(await f.S.PedidosAdmin.ListarPagosPendientesAsync(), x => x.IdPago == pago.IdPago);
 
         var pagado = await f.S.PedidosAdmin.AprobarPagoAsync(pago.IdPago);

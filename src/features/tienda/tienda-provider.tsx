@@ -11,7 +11,7 @@ interface EstadoTienda {
   readonly cargando: boolean;
   readonly carrito: Carrito;
   readonly sesion: SesionCliente | null;
-  /** false = modo demostracion (sin API): no hay cuentas ni compra. */
+  /** La API habilita las operaciones de compra. */
   readonly compra: boolean;
   /** Aplica el carrito que devolvio una Server Action (el servidor es la fuente de verdad). */
   readonly aplicarCarrito: (c: Carrito) => void;

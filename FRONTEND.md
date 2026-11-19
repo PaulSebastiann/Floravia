@@ -3,28 +3,17 @@
 Vitrina y flujo de compra de Floravia. Next.js 16 (App Router) + React 19 + TypeScript estricto + Tailwind v4.
 Vive en la raiz de este repositorio (`src/`, `package.json`, `next.config.mjs`) junto al backend .NET.
 
-## Modos de funcionamiento
+## Fuente de datos obligatoria
 
-| `FLORAVIA_API_URL` | Modo | Que pasa |
-|---|---|---|
-| vacia | Demostracion | Catalogo de muestra y **tienda local completa sin API**: cuentas, carrito, pedidos y pagos simulados (ver abajo). Un aviso "Modo demostracion" aparece en cuenta, checkout y pedido. |
-| `http://localhost:8081` / `http://api:8080` | Real | Catalogo, cuentas, carrito, pedidos y pagos contra la API .NET. |
+`FLORAVIA_API_URL` es obligatoria. Catálogo, cuentas, carrito, pedidos y pagos siempre pasan por la
+API .NET y PostgreSQL. Si falta la variable, la aplicación falla explícitamente y no usa datos mock.
 
 ```bash
-cp .env.web.example .env.local      # define FLORAVIA_API_URL
+printf 'FLORAVIA_API_URL=http://localhost:8081\nFLORAVIA_COOKIE_SECURE=false\n' > .env.local
 npm install
 npm run dev                         # http://localhost:3000
 npm run verify                      # typecheck + vitest + build
 ```
-
-### Modo demostracion (sin API)
-
-- Cuentas, carritos y pedidos se guardan en `.demo-data/tienda.json` (o la ruta de `FLORAVIA_DEMO_DATA`; si no se puede escribir, quedan en memoria). Borrar el archivo reinicia todo. Un solo proceso: **no es para produccion** ni para varias instancias.
-- Contrasenas con scrypt + sal; sesion en cookie `httpOnly` con un token firmado localmente.
-- **Tarjeta simulada**: cualquier numero, fecha, nombre y CVV se aprueba. Excepciones para probar errores: `4000 0000 0000 0002` (rechazada) y `4000 0000 0000 9995` (fondos insuficientes). Solo se guarda marca y ultimos 4 digitos.
-- **Transferencia**: muestra datos bancarios FICTICIOS rotulados como tales; el comprobante es opcional y el pedido queda "pendiente de verificacion".
-- Las fotos de los productos de muestra son ilustraciones, no fotografias.
-- E2E: `e2e/correr-demo.sh` (construye y levanta el sitio sin API).
 
 ## Flujo de compra
 
@@ -47,7 +36,7 @@ src/
   domain/            Tipos y reglas puras (dinero en centavos, carrito, pedido, validaciones, tarjeta, redireccion segura)
   infrastructure/
     api/             Cliente HTTP (solo servidor), DTO exactos de la API, mapeos, sesion por cookies, adaptador de catalogo
-    mocks/           Datos de muestra (modo demostracion)
+    mocks/           Fixtures conservados únicamente para pruebas unitarias
   app/acciones/      Server Actions: cuenta, carrito, checkout (validan TODO en servidor)
   app/api/tienda/estado   Sesion + carrito para el header (no-store)
   features/tienda/   UI de carrito, cuenta, checkout, pedido
@@ -67,21 +56,20 @@ Cookies (`httpOnly`, `SameSite=Lax`, `Secure` en produccion): `fl_sesion` (JWT 8
 
 ## Brechas del BACKEND que afectan a este frontend
 
-1. **Reserva vs transferencia (riesgo real).** `LimpiezaReservasService` cancela cada minuto los pedidos `PENDIENTE_PAGO`/`PAGO_FALLIDO` con reserva vencida (30 min por defecto) **aunque ya tengan un comprobante pendiente de revision**. Un cliente que transfiere y sube el comprobante puede perder el pedido si el admin tarda. Solucion sugerida: al registrar un pago de transferencia pendiente, extender o confirmar la reserva (o excluir esos pedidos de la limpieza).
-2. **Sin atributos de producto** (cuidado, luz, ocasion, mes de siembra...), **sin "destacado/mas vendido"** y **sin slug ni "linea"**. El adaptador deduce la linea por la categoria raiz (`Flor`->ramos, `Planta`/`Bonsai`->plantas, `Semilla`->semillas) y el slug como `nombre-{id}`. Se ocultan filtros y secciones que no pueden funcionar y "Mas vendidos" pasa a "Novedades". Un producto en una categoria raiz con otro nombre se **omite** (y se avisa en el log del servidor).
-3. **Sin fecha/hora de entrega ni nota de tarjeta** en el pedido: el checkout no las pide (no hay donde guardarlas).
-4. **Sin `Idempotency-Key`** al crear pedidos. Mitigacion actual: crear el pedido convierte el carrito, asi que un doble clic recibe "tu carrito esta vacio".
-5. **JWT de 8 h sin refresh token**: al vencer, el usuario vuelve a iniciar sesion (el carrito se conserva por cuenta).
-6. **Cedula**: el backend solo exige 10 digitos; el frontend replica eso (no exige digito verificador) para no rechazar datos que el backend acepta.
+1. **Sin atributos de producto** (cuidado, luz, ocasion, mes de siembra...), **sin "destacado/mas vendido"** y **sin slug ni "linea"**. El adaptador deduce la linea por la categoria raiz (`Flor`->ramos, `Planta`/`Bonsai`->plantas, `Semilla`->semillas) y el slug como `nombre-{id}`. Se ocultan filtros y secciones que no pueden funcionar y "Mas vendidos" pasa a "Novedades". Un producto en una categoria raiz con otro nombre se **omite** (y se avisa en el log del servidor).
+2. **Sin fecha/hora de entrega ni nota de tarjeta** en el pedido: el checkout no las pide (no hay donde guardarlas).
+3. **Sin `Idempotency-Key`** al crear pedidos. Mitigacion actual: crear el pedido convierte el carrito, asi que un doble clic recibe "tu carrito esta vacio".
+4. **JWT de 8 h sin refresh token**: al vencer, el usuario vuelve a iniciar sesion (el carrito se conserva por cuenta).
+5. **Cedula**: el backend solo exige 10 digitos; el frontend replica eso (no exige digito verificador) para no rechazar datos que el backend acepta.
 
 ## Fotos reales
 
-El frontend muestra las fotos que cargue el administrador (`POST /api/admin/productos/{id}/imagenes`) servidas desde `/media/...` (rewrite a la API). Un producto de la API **sin foto** muestra un marcador neutro "Foto proximamente", no una ilustracion. Las ilustraciones SVG solo existen en el modo demostracion. Las fotos de producto deben ser propias o con licencia: no se pueden generar ni descargar desde este proyecto.
+El frontend muestra las fotos que cargue el administrador (`POST /api/admin/productos/{id}/imagenes`) servidas desde `/media/...` (rewrite a la API). Un producto de la API **sin foto** muestra un marcador neutro "Foto proximamente". Las fotos deben ser propias o contar con licencia.
 
 ## Pruebas
 
 - `npm test`: dominio, validaciones, tarjeta, `volver`, JWT, mapeos y slug, buscador, menu, boton.
-- `motor.test.ts` cubre el motor de la tienda de demostracion (cuentas, carrito, pedidos, pagos, aislamiento entre clientes).
+- `motor.test.ts` conserva cobertura del motor histórico, que ya no forma parte del runtime desplegable.
 - `e2e/`: **E2E contra una API FALSA** (`e2e/api-falsa.mjs`) escrita a partir del contrato leido en el codigo C#. Verifica que **el frontend cumple ese contrato**, no que el backend real se comporte igual. Para correrlo:
 
 ```bash

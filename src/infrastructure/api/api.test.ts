@@ -34,6 +34,7 @@ describe('mapeos de dinero', () => {
   it('urlMedia antepone /media/ una sola vez', () => {
     expect(urlMedia('productos/a.jpg')).toBe('/media/productos/a.jpg');
     expect(urlMedia('/media/productos/a.jpg')).toBe('/media/productos/a.jpg');
+    expect(urlMedia('/images/productos/ramos/a.jpg')).toBe('/images/productos/ramos/a.jpg');
     expect(urlMedia(null)).toBeUndefined();
   });
 });

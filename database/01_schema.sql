@@ -415,5 +415,6 @@ INSERT INTO zona_entrega (sector, costo_envio) VALUES
 INSERT INTO parametro (clave, valor, descripcion) VALUES
     ('IVA_PORCENTAJE',          '15',  'Porcentaje de IVA (confirmar con el SRI)'),
     ('RESERVA_STOCK_MINUTOS',   '30',  'Minutos que se reserva el stock mientras se paga'),
+    ('REVISION_TRANSFERENCIA_HORAS', '48', 'Horas para revisar un comprobante sin liberar el stock'),
     ('MAX_INTENTOS_LOGIN',      '5',   'Intentos fallidos antes de bloquear la cuenta'),
     ('MINUTOS_BLOQUEO_LOGIN',   '15',  'Minutos de bloqueo tras exceder los intentos');

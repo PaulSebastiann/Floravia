@@ -9,6 +9,8 @@ public sealed class ParametrosMD(ParametroDP parametros)
 {
     public async Task<decimal> IvaAsync() => await DecimalAsync(Parametros.IvaPorcentaje, 15m);
     public async Task<int> MinutosReservaAsync() => (int)await DecimalAsync(Parametros.ReservaStockMinutos, 30m);
+    public async Task<int> HorasRevisionTransferenciaAsync() =>
+        (int)await DecimalAsync(Parametros.RevisionTransferenciaHoras, 48m);
     public async Task<int> MaxIntentosLoginAsync() => (int)await DecimalAsync(Parametros.MaxIntentosLogin, 5m);
     public async Task<int> MinutosBloqueoLoginAsync() => (int)await DecimalAsync(Parametros.MinutosBloqueoLogin, 15m);
 

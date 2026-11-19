@@ -1,12 +1,14 @@
--- Ejecutar contra la base existente.
--- ADVERTENCIA: limpia producto y todos los datos dependientes (carritos, pedidos,
--- reservas, movimientos e imágenes). Úsalo solo para sincronizar desde cero.
-\set ON_ERROR_STOP on
+-- Catálogo inicial de la tienda.
+-- Es seguro volver a ejecutarlo: inserta por `codigo` únicamente lo que falta.
+-- NUNCA pisa cambios del administrador ni reinicia stock, carritos o pedidos.
 SET search_path TO floravia;
 
 BEGIN;
 
-TRUNCATE TABLE producto RESTART IDENTITY CASCADE;
+-- Parámetro añadido también para instalaciones cuyo volumen ya existía.
+INSERT INTO parametro (clave, valor, descripcion)
+VALUES ('REVISION_TRANSFERENCIA_HORAS', '48', 'Horas para revisar un comprobante sin liberar el stock')
+ON CONFLICT (clave) DO NOTHING;
 
 -- Categorías
 INSERT INTO categoria (nombre, descripcion)
@@ -46,46 +48,69 @@ VALUES
     ((SELECT id_categoria FROM categoria WHERE nombre = 'Semilla'), 'semilla-tomate', 'Semillas de tomate cherry', 'Variedad de crecimiento indeterminado para maceta.', 'Requiere tutor, sol y riego regular.', 2.80, 20, 5, 'ACTIVO'),
     ((SELECT id_categoria FROM categoria WHERE nombre = 'Semilla'), 'semilla-cosmos', 'Semillas de cosmos', 'Flor de campo para polinizadores.', 'Siembra en pleno sol y riega moderadamente.', 2.20, 20, 5, 'ACTIVO'),
     ((SELECT id_categoria FROM categoria WHERE nombre = 'Semilla'), 'semilla-menta', 'Semillas de menta', 'Aromática vigorosa de crecimiento rápido.', 'Mejor en maceta propia y con humedad constante.', 2.40, 20, 5, 'ACTIVO'),
-    ((SELECT id_categoria FROM categoria WHERE nombre = 'Semilla'), 'semilla-capuchina', 'Semillas de capuchina', 'Flor comestible con hojas y flores de sabor picante.', 'Sol o semisombra y suelo bien drenado.', 2.60, 20, 5, 'ACTIVO');
+    ((SELECT id_categoria FROM categoria WHERE nombre = 'Semilla'), 'semilla-capuchina', 'Semillas de capuchina', 'Flor comestible con hojas y flores de sabor picante.', 'Sol o semisombra y suelo bien drenado.', 2.60, 20, 5, 'ACTIVO')
+ON CONFLICT (codigo) DO NOTHING;
 
 -- Imágenes principales reales disponibles en public/images
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/ramos/ramo-aurora.jpg', true, 0 FROM producto WHERE codigo = 'ramo-aurora';
+SELECT id_producto, '/images/productos/ramos/ramo-aurora.jpg', true, 0 FROM producto WHERE codigo = 'ramo-aurora' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/ramos/ramo-girasol.jpg', true, 0 FROM producto WHERE codigo = 'ramo-girasol';
+SELECT id_producto, '/images/productos/ramos/ramo-girasol.jpg', true, 0 FROM producto WHERE codigo = 'ramo-girasol' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/ramos/ramo-nube.jpg', true, 0 FROM producto WHERE codigo = 'ramo-nube';
+SELECT id_producto, '/images/productos/ramos/ramo-nube.jpg', true, 0 FROM producto WHERE codigo = 'ramo-nube' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/ramos/ramo-ternura.jpg', true, 0 FROM producto WHERE codigo = 'ramo-ternura';
+SELECT id_producto, '/images/productos/ramos/ramo-ternura.jpg', true, 0 FROM producto WHERE codigo = 'ramo-ternura' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/ramos/ramo-fiesta.jpg', true, 0 FROM producto WHERE codigo = 'ramo-fiesta';
+SELECT id_producto, '/images/productos/ramos/ramo-fiesta.jpg', true, 0 FROM producto WHERE codigo = 'ramo-fiesta' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/ramos/ramo-primavera.jpg', true, 0 FROM producto WHERE codigo = 'ramo-primavera';
+SELECT id_producto, '/images/productos/ramos/ramo-primavera.jpg', true, 0 FROM producto WHERE codigo = 'ramo-primavera' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/ramos/ramo-atardecer.jpg', true, 0 FROM producto WHERE codigo = 'ramo-atardecer';
+SELECT id_producto, '/images/productos/ramos/ramo-atardecer.jpg', true, 0 FROM producto WHERE codigo = 'ramo-atardecer' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/ramos/ramo-eterno.jpg', true, 0 FROM producto WHERE codigo = 'ramo-eterno';
+SELECT id_producto, '/images/productos/ramos/ramo-eterno.jpg', true, 0 FROM producto WHERE codigo = 'ramo-eterno' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/ramos/ramo-lirio.jpg', true, 0 FROM producto WHERE codigo = 'ramo-lirio';
+SELECT id_producto, '/images/productos/ramos/ramo-lirio.jpg', true, 0 FROM producto WHERE codigo = 'ramo-lirio' ON CONFLICT DO NOTHING;
 
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/plantas/planta-suculenta-echeveria.jpg', true, 0 FROM producto WHERE codigo = 'planta-suculenta-echeveria';
+SELECT id_producto, '/images/productos/plantas/planta-suculenta-echeveria.jpg', true, 0 FROM producto WHERE codigo = 'planta-suculenta-echeveria' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/plantas/planta-pothos.jpg', true, 0 FROM producto WHERE codigo = 'planta-pothos';
+SELECT id_producto, '/images/productos/plantas/planta-pothos.jpg', true, 0 FROM producto WHERE codigo = 'planta-pothos' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/plantas/planta-sansevieria.jpg', true, 0 FROM producto WHERE codigo = 'planta-sansevieria';
+SELECT id_producto, '/images/productos/plantas/planta-sansevieria.jpg', true, 0 FROM producto WHERE codigo = 'planta-sansevieria' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/plantas/planta-monstera.jpg', true, 0 FROM producto WHERE codigo = 'planta-monstera';
+SELECT id_producto, '/images/productos/plantas/planta-monstera.jpg', true, 0 FROM producto WHERE codigo = 'planta-monstera' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/plantas/planta-calathea.jpg', true, 0 FROM producto WHERE codigo = 'planta-calathea';
+SELECT id_producto, '/images/productos/plantas/planta-calathea.jpg', true, 0 FROM producto WHERE codigo = 'planta-calathea' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/plantas/planta-helecho.jpg', true, 0 FROM producto WHERE codigo = 'planta-helecho';
+SELECT id_producto, '/images/productos/plantas/planta-helecho.jpg', true, 0 FROM producto WHERE codigo = 'planta-helecho' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/plantas/planta-lavanda.jpg', true, 0 FROM producto WHERE codigo = 'planta-lavanda';
+SELECT id_producto, '/images/productos/plantas/planta-lavanda.jpg', true, 0 FROM producto WHERE codigo = 'planta-lavanda' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/plantas/planta-bonsai-ficus.jpg', true, 0 FROM producto WHERE codigo = 'planta-bonsai-ficus';
+SELECT id_producto, '/images/productos/plantas/planta-bonsai-ficus.jpg', true, 0 FROM producto WHERE codigo = 'planta-bonsai-ficus' ON CONFLICT DO NOTHING;
 INSERT INTO imagen_producto (id_producto, ruta, es_principal, orden)
-SELECT id_producto, '/images/productos/plantas/planta-aloe.jpg', true, 0 FROM producto WHERE codigo = 'planta-aloe';
+SELECT id_producto, '/images/productos/plantas/planta-aloe.jpg', true, 0 FROM producto WHERE codigo = 'planta-aloe' ON CONFLICT DO NOTHING;
+
+-- Colores que usa la ficha de los ramos en el frontend.
+INSERT INTO producto_color (id_producto, id_color)
+SELECT p.id_producto, c.id_color
+FROM (VALUES
+    ('ramo-aurora', 'Rojo'),
+    ('ramo-girasol', 'Amarillo'),
+    ('ramo-nube', 'Blanco'),
+    ('ramo-ternura', 'Rosado'),
+    ('ramo-fiesta', 'Rojo'),
+    ('ramo-fiesta', 'Amarillo'),
+    ('ramo-fiesta', 'Morado'),
+    ('ramo-primavera', 'Morado'),
+    ('ramo-primavera', 'Rosado'),
+    ('ramo-atardecer', 'Naranja'),
+    ('ramo-atardecer', 'Amarillo'),
+    ('ramo-eterno', 'Rojo'),
+    ('ramo-lirio', 'Blanco')
+) AS semilla(codigo_producto, nombre_color)
+JOIN producto p ON p.codigo = semilla.codigo_producto
+JOIN color c ON c.nombre = semilla.nombre_color
+ON CONFLICT DO NOTHING;
 
 COMMIT;
 
@@ -96,3 +121,16 @@ FROM categoria c
 LEFT JOIN producto p ON p.id_categoria = c.id_categoria
 GROUP BY c.nombre
 ORDER BY c.nombre;
+
+-- Debe devolver 26. Si no, la transacción anterior habría fallado antes.
+SELECT COUNT(*) AS productos_catalogo_front
+FROM producto
+WHERE codigo IN (
+    'ramo-aurora','ramo-girasol','ramo-nube','ramo-ternura','ramo-fiesta',
+    'ramo-primavera','ramo-atardecer','ramo-eterno','ramo-lirio',
+    'planta-suculenta-echeveria','planta-pothos','planta-sansevieria',
+    'planta-monstera','planta-calathea','planta-helecho','planta-lavanda',
+    'planta-bonsai-ficus','planta-aloe','semilla-girasol','semilla-albahaca',
+    'semilla-cilantro','semilla-lechuga','semilla-tomate','semilla-cosmos',
+    'semilla-menta','semilla-capuchina'
+);

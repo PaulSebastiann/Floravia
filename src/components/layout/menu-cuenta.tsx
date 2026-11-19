@@ -30,7 +30,7 @@ export function MenuCuenta() {
     return () => { document.removeEventListener('click', cerrar); document.removeEventListener('keydown', cerrar); };
   }, []);
 
-  // En modo demostracion no hay API: no se ofrecen cuentas que no pueden funcionar.
+  // Si el estado inicial todavía carga, evitamos mostrar una sesión incorrecta.
   if (!compra && !cargando) return null;
   if (cargando) return <div className="h-11 w-24 animate-pulse rounded-full bg-moss-100" aria-hidden="true" />;
 
