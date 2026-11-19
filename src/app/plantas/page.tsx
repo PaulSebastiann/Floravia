@@ -13,7 +13,7 @@ import { Faq } from '@/features/marketing/faq';
 import { LandingHero } from '@/features/marketing/landing-hero';
 import { TarjetasEnlace } from '@/features/marketing/tarjetas-enlace';
 import { ValueProps } from '@/features/marketing/value-props';
-import { obtenerRepositorio } from '@/infrastructure/repositorio';
+import { capacidades, esperarSolicitud, obtenerRepositorio } from '@/infrastructure/repositorio';
 
 export const metadata: Metadata = {
   title: 'Plantas de interior, exterior y suculentas en Quito',
@@ -29,7 +29,9 @@ const TAMANOS = [
 ] as const;
 
 export default async function PlantasPage() {
+  await esperarSolicitud();
   const repo = obtenerRepositorio();
+  const cap = capacidades();
   const [masVendidos, petFriendly] = await Promise.all([
     repo.masVendidos('plantas', 4),
     repo.listar({ linea: 'plantas', filtros: { pet: ['si'] }, orden: 'relevancia', pagina: 1 }),
@@ -47,6 +49,7 @@ export default async function PlantasPage() {
         puntos={['De interior y exterior', 'Opciones pet-friendly', 'Maceta recomendada']}
       />
 
+      {cap.atributos && (
       <section aria-label="Nivel de cuidado" className="py-16 sm:py-20">
         <Container>
           <SectionHeading etiqueta="Por experiencia" titulo="¿Qué tanto tiempo puedes dedicarle?" descripcion="Empieza por el nivel de cuidado: es la mejor garantía de que tu planta se quede contigo." />
@@ -61,7 +64,9 @@ export default async function PlantasPage() {
           </div>
         </Container>
       </section>
+      )}
 
+      {cap.atributos && (
       <section aria-label="Necesidad de luz" className="bg-moss-50 py-16 sm:py-20">
         <Container>
           <SectionHeading etiqueta="Por luz" titulo="Mira tu ventana antes de elegir" descripcion="La luz disponible decide más que cualquier otro factor. Elige según lo que realmente recibe tu espacio." />
@@ -77,11 +82,12 @@ export default async function PlantasPage() {
           <p className="mt-6 text-sm text-muted">Interior o exterior es otro criterio: puedes combinarlo en el <Link href={hrefCatalogo({ linea: 'plantas' })} className="font-semibold text-moss-700 underline underline-offset-4">catálogo</Link>.</p>
         </Container>
       </section>
+      )}
 
-      <section aria-label="Más vendidas" className="py-16 sm:py-20">
+      <section aria-label={cap.masVendidos ? 'Más vendidas' : 'Novedades'} className="py-16 sm:py-20">
         <Container>
           <SectionHeading
-            etiqueta="Más vendidas"
+            etiqueta={cap.masVendidos ? 'Más vendidas' : 'Novedades'}
             titulo="Las que más se llevan"
             accion={<Button asChild variante="contorno" tamano="sm"><Link href={hrefCatalogo({ linea: 'plantas' })}>Ver todas</Link></Button>}
           />
@@ -104,6 +110,7 @@ export default async function PlantasPage() {
         </Container>
       </section>
 
+      {cap.atributos && (
       <section aria-label="Pet-friendly" className="py-16 sm:py-20">
         <Container>
           <div className="grid items-center gap-8 rounded-[2rem] bg-sun-100 p-8 sm:p-12 lg:grid-cols-[1.2fr_1fr]">
@@ -117,6 +124,7 @@ export default async function PlantasPage() {
           </div>
         </Container>
       </section>
+      )}
 
       <section aria-label="Cuidados" className="pb-16 sm:pb-20">
         <Container>

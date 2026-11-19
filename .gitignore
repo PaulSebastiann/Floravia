@@ -439,3 +439,6 @@ next-env.d.ts
 .env.local
 coverage/
 AGENTS.md
+
+# Datos de la tienda de demostracion (cuentas y pedidos locales)
+.demo-data/

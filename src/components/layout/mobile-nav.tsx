@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { hrefWhatsApp } from '@/content/sitio';
+import { useTienda } from '@/features/tienda/tienda-provider';
 import { NAV_EXTRA, NAV_LINEAS } from './nav-data';
 
 export function MobileNav() {
+  const { sesion, compra, cargando } = useTienda();
   return (
     <Sheet>
       <SheetTrigger
@@ -52,11 +54,29 @@ export function MobileNav() {
               </li>
             ))}
           </ul>
+          {compra && !cargando && (
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              {sesion ? (
+                <SheetClose asChild>
+                  <Link href="/cuenta/pedidos" className="col-span-2 flex h-12 items-center justify-center rounded-full border border-moss-700 font-semibold text-moss-800">Mis pedidos</Link>
+                </SheetClose>
+              ) : (
+                <>
+                  <SheetClose asChild>
+                    <Link href="/cuenta/ingresar" className="flex h-12 items-center justify-center rounded-full border border-moss-700 font-semibold text-moss-800">Ingresar</Link>
+                  </SheetClose>
+                  <SheetClose asChild>
+                    <Link href="/cuenta/crear" className="flex h-12 items-center justify-center rounded-full bg-moss-700 font-semibold text-cream-50">Crear cuenta</Link>
+                  </SheetClose>
+                </>
+              )}
+            </div>
+          )}
           <a
             href={hrefWhatsApp('Hola Floravia, quisiera hacer una consulta.')}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-6 flex h-12 items-center justify-center rounded-full bg-moss-700 font-semibold text-cream-50"
+            className="mt-3 flex h-12 items-center justify-center rounded-full bg-moss-100 font-semibold text-moss-900"
           >
             Escríbenos por WhatsApp
           </a>

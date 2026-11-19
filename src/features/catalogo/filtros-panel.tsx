@@ -16,9 +16,11 @@ const NOMBRE_PLURAL = { ramos: 'Ramos', plantas: 'Plantas', semillas: 'Semillas'
 interface Props {
   consulta: ConsultaCatalogo;
   facetas: readonly Faceta[];
+  /** false = la fuente de datos no tiene atributos: no se ofrecen filtros que no pueden funcionar. */
+  conAtributos?: boolean;
 }
 
-function contenido(consulta: ConsultaCatalogo, facetas: readonly Faceta[], alternar: (clave: string, valor: string) => void, pendiente: boolean) {
+function contenido(consulta: ConsultaCatalogo, facetas: readonly Faceta[], alternar: (clave: string, valor: string) => void, pendiente: boolean, conAtributos: boolean) {
   const linea = consulta.linea;
   return (
     <div className={cn('space-y-7 transition-opacity', pendiente && 'opacity-60')} aria-busy={pendiente}>
@@ -42,13 +44,13 @@ function contenido(consulta: ConsultaCatalogo, facetas: readonly Faceta[], alter
         </ul>
       </nav>
 
-      {!linea && (
+      {conAtributos && !linea && (
         <p className="rounded-xl bg-cream-100 p-4 text-sm text-muted">
           Elige una línea para ver filtros específicos: ocasión y color para ramos, cuidado y luz para plantas, cultivo y mes de siembra para semillas.
         </p>
       )}
 
-      {linea && filtrosDe(linea).map((def) => {
+      {conAtributos && linea && filtrosDe(linea).map((def) => {
         const faceta = facetas.find((f) => f.clave === def.clave);
         const seleccion = consulta.filtros[def.clave] ?? [];
         return (
@@ -112,12 +114,12 @@ function useFiltros(consulta: ConsultaCatalogo) {
   return { alternar, pendiente, consultaVisible: { ...consulta, filtros } satisfies ConsultaCatalogo };
 }
 
-export function FiltrosPanel({ consulta, facetas }: Props) {
+export function FiltrosPanel({ consulta, facetas, conAtributos = true }: Props) {
   const { alternar, pendiente, consultaVisible } = useFiltros(consulta);
-  return <aside aria-label="Filtros" className="hidden lg:block">{contenido(consultaVisible, facetas, alternar, pendiente)}</aside>;
+  return <aside aria-label="Filtros" className="hidden lg:block">{contenido(consultaVisible, facetas, alternar, pendiente, conAtributos)}</aside>;
 }
 
-export function FiltrosMovil({ consulta, facetas, total }: Props & { total: number }) {
+export function FiltrosMovil({ consulta, facetas, total, conAtributos = true }: Props & { total: number }) {
   const { alternar, pendiente, consultaVisible } = useFiltros(consulta);
   const activos = Object.values(consultaVisible.filtros).reduce((n, v) => n + v.length, 0);
   return (
@@ -130,7 +132,7 @@ export function FiltrosMovil({ consulta, facetas, total }: Props & { total: numb
           </Button>
         </SheetTrigger>
         <SheetContent titulo="Filtros" descripcion="Filtrar productos" lado="izquierda">
-          <div className="p-5">{contenido(consultaVisible, facetas, alternar, pendiente)}</div>
+          <div className="p-5">{contenido(consultaVisible, facetas, alternar, pendiente, conAtributos)}</div>
           <div className="sticky bottom-0 border-t border-line bg-cream-50 p-4">
             <SheetClose asChild>
               <Button className="w-full">Ver {total} {total === 1 ? 'producto' : 'productos'}</Button>

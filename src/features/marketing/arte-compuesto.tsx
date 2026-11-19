@@ -1,12 +1,11 @@
-import { BotanicalArt } from '@/components/ui/botanical-art';
 import { cn } from '@/lib/cn';
 
 type Tono = 'home' | 'ramos' | 'plantas' | 'semillas';
 
 const TARJETAS = [
-  { forma: 'ramo', semilla: 'hero-ramo', colores: ['#c4575a', '#e8938f', '#fbe9e7'], clase: 'left-0 top-10 -rotate-6 w-[46%]' },
-  { forma: 'planta', semilla: 'hero-planta', colores: [], clase: 'right-0 top-0 rotate-3 w-[52%]' },
-  { forma: 'sobre', semilla: 'hero-sobre', colores: ['#e0a93b'], clase: 'bottom-0 left-[26%] rotate-1 w-[44%]' },
+  { forma: 'ramo', semilla: 'hero-ramo', colores: ['#c4575a', '#e8938f', '#fbe9e7'], foto: '/images/landing/hero-flowers.jpg', clase: 'left-0 top-10 -rotate-6 w-[46%]' },
+  { forma: 'planta', semilla: 'hero-planta', colores: [], foto: '/images/landing/bouquet-roses.jpg', clase: 'right-0 top-0 rotate-3 w-[52%]' },
+  { forma: 'sobre', semilla: 'hero-sobre', colores: ['#e0a93b'], foto: '/images/landing/bouquet-color.jpg', clase: 'bottom-0 left-[26%] rotate-1 w-[44%]' },
 ] as const;
 
 /** Composicion de tres "tarjetas" ilustradas; la principal cambia segun la landing. */
@@ -28,7 +27,7 @@ export function ArteCompuesto({ tono, className }: { tono: Tono; className?: str
               principal === idx && 'z-10 scale-110',
             )}
           >
-            <BotanicalArt forma={t.forma} semilla={t.semilla} colores={t.colores} className="aspect-square" />
+            <img src={t.foto} alt="" className="aspect-square w-full object-cover" />
           </div>
         );
       })}

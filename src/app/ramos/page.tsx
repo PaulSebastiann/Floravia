@@ -14,7 +14,7 @@ import { LandingHero } from '@/features/marketing/landing-hero';
 import { Pasos } from '@/features/marketing/pasos';
 import { TarjetasEnlace } from '@/features/marketing/tarjetas-enlace';
 import { ValueProps } from '@/features/marketing/value-props';
-import { obtenerRepositorio } from '@/infrastructure/repositorio';
+import { capacidades, esperarSolicitud, obtenerRepositorio } from '@/infrastructure/repositorio';
 
 export const metadata: Metadata = {
   title: 'Ramos y flores a domicilio en Quito',
@@ -24,7 +24,9 @@ export const metadata: Metadata = {
 const ocasion = (valor: string) => hrefCatalogo({ linea: 'ramos', filtros: { ocasion: [valor] } });
 
 export default async function RamosPage() {
+  await esperarSolicitud();
   const repo = obtenerRepositorio();
+  const cap = capacidades();
   const [masVendidos, destacados] = await Promise.all([repo.masVendidos('ramos', 4), repo.destacados('ramos', 4)]);
 
   return (
@@ -39,6 +41,7 @@ export default async function RamosPage() {
         puntos={['Entrega a domicilio en Quito', 'Tarjeta con tu mensaje', 'Flores seleccionadas']}
       />
 
+      {cap.atributos && (
       <section aria-label="Compra por ocasión" className="py-16 sm:py-20">
         <Container>
           <SectionHeading etiqueta="Por ocasión" titulo="¿Qué quieres celebrar?" descripcion="Elige la ocasión y te mostramos los ramos que mejor encajan." />
@@ -56,12 +59,13 @@ export default async function RamosPage() {
           </div>
         </Container>
       </section>
+      )}
 
-      <section aria-label="Más vendidos" className="bg-cream-100 py-16 sm:py-20">
+      <section aria-label={cap.masVendidos ? 'Más vendidos' : 'Novedades'} className="bg-cream-100 py-16 sm:py-20">
         <Container>
           <SectionHeading
-            etiqueta="Más vendidos"
-            titulo="Los favoritos de nuestros clientes"
+            etiqueta={cap.masVendidos ? 'Más vendidos' : 'Novedades'}
+            titulo={cap.masVendidos ? 'Los favoritos de nuestros clientes' : 'Lo más reciente en nuestro catálogo'}
             accion={<Button asChild variante="contorno" tamano="sm"><Link href={hrefCatalogo({ linea: 'ramos' })}>Ver todos</Link></Button>}
           />
           <div className="mt-8"><CarruselProductos productos={masVendidos} etiqueta="Ramos más vendidos" /></div>

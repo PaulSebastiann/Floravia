@@ -3,19 +3,18 @@
 import { ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useId, useState, type FocusEvent, type KeyboardEvent } from 'react';
-import { BotanicalArt } from '@/components/ui/botanical-art';
+import { useCallback, useEffect, useId, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
 import { cn } from '@/lib/cn';
 import { NAV_EXTRA, NAV_LINEAS, type LineaNav } from './nav-data';
 
 const ARTE = {
-  ramos: { forma: 'ramo', colores: ['#c4575a', '#e8938f', '#fbe9e7'] },
-  plantas: { forma: 'planta', colores: [] },
-  semillas: { forma: 'sobre', colores: ['#e0a93b'] },
+  ramos: '/images/productos/ramos/ramo-girasol.jpg',
+  plantas: '/images/productos/plantas/planta-monstera.jpg',
+  semillas: '/images/productos/plantas/planta-lavanda.jpg',
 } as const;
 
 function Panel({ item, id }: { item: LineaNav; id: string }) {
-  const arte = ARTE[item.linea];
+  const foto = ARTE[item.linea];
   return (
     <div id={id} className="absolute inset-x-0 top-full z-40 border-b border-line bg-cream-50 shadow-lift animate-fade-in">
       <div className="mx-auto grid max-w-7xl grid-cols-[1.1fr_2fr_0.9fr] gap-10 px-8 py-8">
@@ -43,7 +42,8 @@ function Panel({ item, id }: { item: LineaNav; id: string }) {
           ))}
         </div>
         <div className="overflow-hidden rounded-card">
-          <BotanicalArt forma={arte.forma} semilla={`nav-${item.linea}`} colores={arte.colores} className="aspect-square" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={foto} alt="Producto destacado de la tienda" className="aspect-square size-full object-cover" />
         </div>
       </div>
     </div>
@@ -51,18 +51,36 @@ function Panel({ item, id }: { item: LineaNav; id: string }) {
 }
 
 /** Navegacion principal con mega menu: hover, foco por teclado, Escape y clic fuera. */
+/** Tiempo que el menu tolera que el mouse salga del area (hueco o diagonal) antes de cerrarse. */
+export const RETARDO_CIERRE_MS = 200;
+
 export function MainNav() {
   const pathname = usePathname();
   const idBase = useId();
   const [abierto, setAbierto] = useState<string | null>(null);
+  const temporizador = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  useEffect(() => setAbierto(null), [pathname]);
+  const cancelarCierre = useCallback(() => {
+    clearTimeout(temporizador.current);
+    temporizador.current = undefined;
+  }, []);
+  /** Abre al instante y cancela cualquier cierre pendiente (el mouse volvio a la zona). */
+  const abrir = useCallback((linea: string) => { cancelarCierre(); setAbierto(linea); }, [cancelarCierre]);
+  /** Cierra con retardo: da tiempo a cruzar el hueco boton-panel o a moverse en diagonal. */
+  const programarCierre = useCallback(() => {
+    cancelarCierre();
+    temporizador.current = setTimeout(() => setAbierto(null), RETARDO_CIERRE_MS);
+  }, [cancelarCierre]);
+
+  useEffect(() => { cancelarCierre(); setAbierto(null); }, [pathname, cancelarCierre]);
+  useEffect(() => cancelarCierre, [cancelarCierre]); // limpia el temporizador al desmontar
 
   const cerrarSiSaleFoco = (e: FocusEvent<HTMLLIElement>) => {
-    if (!e.currentTarget.contains(e.relatedTarget)) setAbierto(null);
+    if (!e.currentTarget.contains(e.relatedTarget)) { cancelarCierre(); setAbierto(null); }
   };
   const alTeclear = (e: KeyboardEvent<HTMLLIElement>) => {
     if (e.key === 'Escape' && abierto) {
+      cancelarCierre();
       setAbierto(null);
       e.currentTarget.querySelector('button')?.focus();
     }
@@ -70,7 +88,7 @@ export function MainNav() {
 
   const enlaceClase = (href: string) =>
     cn(
-      'rounded-full px-4 py-2 font-medium text-moss-900 transition-colors hover:bg-moss-100',
+      'rounded-full px-3 py-2 font-medium text-moss-900 xl:px-4 transition-colors hover:bg-moss-100',
       pathname === href && 'bg-moss-100',
     );
 
@@ -83,21 +101,25 @@ export function MainNav() {
           return (
             <li
               key={item.linea}
-              onMouseEnter={() => setAbierto(item.linea)}
-              onMouseLeave={() => setAbierto(null)}
+              onMouseEnter={() => abrir(item.linea)}
+              onMouseLeave={programarCierre}
               onBlur={cerrarSiSaleFoco}
               onKeyDown={alTeclear}
             >
-              <button
-                type="button"
-                aria-expanded={activo}
-                aria-controls={activo ? idPanel : undefined}
-                onClick={() => setAbierto(activo ? null : item.linea)}
-                className={cn(enlaceClase(item.href), 'inline-flex items-center gap-1', activo && 'bg-moss-100')}
-              >
-                {item.etiqueta}
-                <ChevronDown className={cn('size-4 transition-transform', activo && 'rotate-180')} aria-hidden="true" />
-              </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  aria-expanded={activo}
+                  aria-controls={activo ? idPanel : undefined}
+                  onClick={() => { cancelarCierre(); setAbierto(activo ? null : item.linea); }}
+                  className={cn(enlaceClase(item.href), 'inline-flex items-center gap-1 whitespace-nowrap', activo && 'bg-moss-100')}
+                >
+                  {item.etiqueta}
+                  <ChevronDown className={cn('size-4 transition-transform', activo && 'rotate-180')} aria-hidden="true" />
+                </button>
+                {/* Puente invisible: cubre el hueco entre el boton y el panel para que el hover no se pierda. */}
+                {activo && <span aria-hidden="true" data-puente className="absolute inset-x-0 top-full h-8" />}
+              </div>
               {activo && <Panel item={item} id={idPanel} />}
             </li>
           );

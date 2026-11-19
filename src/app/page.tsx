@@ -11,10 +11,12 @@ import { LandingHero } from '@/features/marketing/landing-hero';
 import { TarjetasEnlace } from '@/features/marketing/tarjetas-enlace';
 import { Testimonios } from '@/features/marketing/testimonios';
 import { ValueProps } from '@/features/marketing/value-props';
-import { obtenerRepositorio } from '@/infrastructure/repositorio';
+import { capacidades, esperarSolicitud, obtenerRepositorio } from '@/infrastructure/repositorio';
 
 export default async function HomePage() {
+  await esperarSolicitud();
   const repo = obtenerRepositorio();
+  const cap = capacidades();
   const [ramos, plantas, semillas] = await Promise.all([
     repo.masVendidos('ramos', 4),
     repo.masVendidos('plantas', 4),
@@ -53,9 +55,9 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      <section aria-label="Más vendidos" className="bg-cream-100 py-16 sm:py-20">
+      <section aria-label={cap.masVendidos ? 'Más vendidos' : 'Novedades'} className="bg-cream-100 py-16 sm:py-20">
         <Container>
-          <SectionHeading etiqueta="Más vendidos" titulo="Lo que más se llevan nuestros clientes" />
+          <SectionHeading etiqueta={cap.masVendidos ? 'Más vendidos' : 'Novedades'} titulo={cap.masVendidos ? 'Lo que más se llevan nuestros clientes' : 'Lo nuevo en Floravia'} />
           <Tabs defaultValue="ramos" className="mt-8">
             <TabsList aria-label="Categoría">
               <TabsTrigger value="ramos">Ramos</TabsTrigger>

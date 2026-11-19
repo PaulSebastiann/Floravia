@@ -4,6 +4,7 @@ import { Container } from '@/components/ui/container';
 import { SITIO } from '@/content/sitio';
 import { CartDrawer } from './cart-drawer';
 import { MainNav } from './main-nav';
+import { MenuCuenta } from './menu-cuenta';
 import { MobileNav } from './mobile-nav';
 import { SearchBox } from './search-box';
 
@@ -29,7 +30,8 @@ export function SiteHeader() {
           <span className="font-display text-2xl font-semibold text-moss-900">{SITIO.nombre}</span>
         </Link>
         <MainNav />
-        <SearchBox className="order-last w-full lg:order-none lg:ml-auto lg:w-80" />
+        <SearchBox className="order-last w-full lg:order-none lg:ml-auto lg:w-44 xl:w-72" />
+        <MenuCuenta />
         <CartDrawer />
       </Container>
     </header>

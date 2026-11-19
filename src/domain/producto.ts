@@ -1,8 +1,9 @@
 import type { Centavos } from './dinero';
 
 /**
- * ATENCION: este contrato es una PROPUESTA del frontend. El esquema relacional
- * actual del backend no tiene atributos de cuidado/luz/germinacion/ocasion.
+ * Los atributos de cada linea son OPCIONALES: el backend actual solo entrega categoria,
+ * precio, stock, texto de cuidados, colores e imagenes. Cuando exista la migracion de
+ * atributos (jsonb) se llenan; mientras tanto la UI debe tolerar su ausencia.
  * Ver README.md ("Brechas con el backend").
  */
 export const LINEAS = ['ramos', 'plantas', 'semillas'] as const;
@@ -18,6 +19,8 @@ export interface Imagen {
 
 interface ProductoBase {
   readonly id: string;
+  /** Id numerico con el que se compra (API real o, en la demostracion, posicion en el catalogo de muestra). */
+  readonly idProducto?: number;
   readonly slug: string;
   readonly nombre: string;
   readonly resumen: string;
@@ -25,6 +28,12 @@ interface ProductoBase {
   readonly precio: Centavos;
   readonly imagenes: readonly Imagen[];
   readonly disponible: boolean;
+  /** Unidades que se pueden vender ahora (backend: stock - reservado). Undefined = desconocido. */
+  readonly stockDisponible?: number;
+  /** Texto libre de cuidados que escribe el admin (el backend aun no tiene atributos estructurados). */
+  readonly cuidados?: string;
+  /** 'api' = producto real del backend. Sin foto muestra un marcador neutro, nunca una ilustracion. */
+  readonly fuente?: 'api';
   readonly destacado: boolean;
   readonly masVendido: boolean;
 }
@@ -37,11 +46,11 @@ export type ColorFlor = (typeof COLORES)[number];
 
 export interface Ramo extends ProductoBase {
   readonly linea: 'ramos';
-  readonly ocasiones: readonly Ocasion[];
-  readonly tiposFlor: readonly string[];
-  readonly colores: readonly ColorFlor[];
-  readonly duracionDias: number;
-  readonly composicion: readonly string[];
+  readonly ocasiones?: readonly Ocasion[];
+  readonly tiposFlor?: readonly string[];
+  readonly colores?: readonly ColorFlor[];
+  readonly duracionDias?: number;
+  readonly composicion?: readonly string[];
 }
 
 export const NIVELES_CUIDADO = ['facil', 'medio', 'experto'] as const;
@@ -62,13 +71,13 @@ export interface TamanoPlanta {
 
 export interface Planta extends ProductoBase {
   readonly linea: 'plantas';
-  readonly nivelCuidado: NivelCuidado;
-  readonly luz: Luz;
-  readonly ubicacion: Ubicacion;
-  readonly petFriendly: boolean;
-  readonly riegoCadaDias: number;
-  readonly tamanos: readonly TamanoPlanta[];
-  readonly maceta: string;
+  readonly nivelCuidado?: NivelCuidado;
+  readonly luz?: Luz;
+  readonly ubicacion?: Ubicacion;
+  readonly petFriendly?: boolean;
+  readonly riegoCadaDias?: number;
+  readonly tamanos?: readonly TamanoPlanta[];
+  readonly maceta?: string;
 }
 
 export const CULTIVOS = ['flores', 'huerto', 'aromaticas'] as const;
@@ -85,11 +94,11 @@ export const NOMBRES_MES = [
 
 export interface Semilla extends ProductoBase {
   readonly linea: 'semillas';
-  readonly cultivo: Cultivo;
-  readonly uso: UsoSemilla;
-  readonly mesesSiembra: readonly Mes[];
-  readonly germinacionDias: { readonly min: number; readonly max: number };
-  readonly contenido: string;
+  readonly cultivo?: Cultivo;
+  readonly uso?: UsoSemilla;
+  readonly mesesSiembra?: readonly Mes[];
+  readonly germinacionDias?: { readonly min: number; readonly max: number };
+  readonly contenido?: string;
 }
 
 export type Producto = Ramo | Planta | Semilla;

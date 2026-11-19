@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { hrefCatalogo, type ConsultaCatalogo } from '@/domain/filtros';
-import { obtenerRepositorio } from '@/infrastructure/repositorio';
+import { capacidades, obtenerRepositorio } from '@/infrastructure/repositorio';
 import { FiltrosMovil, FiltrosPanel } from './filtros-panel';
 import { GrillaProductos } from './grilla-productos';
 import { OrdenSelect } from './orden-select';
@@ -19,7 +19,7 @@ export async function CatalogoContenido({ consulta }: { consulta: ConsultaCatalo
 
   return (
     <div className="grid gap-10 lg:grid-cols-[16rem_1fr]">
-      <FiltrosPanel consulta={consulta} facetas={facetas} />
+      <FiltrosPanel consulta={consulta} facetas={facetas} conAtributos={capacidades().atributos} />
       <div>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <p role="status" aria-live="polite" className="text-muted">
@@ -27,7 +27,7 @@ export async function CatalogoContenido({ consulta }: { consulta: ConsultaCatalo
             {consulta.q ? <> para «<strong className="text-moss-900">{consulta.q}</strong>»</> : null}
           </p>
           <div className="flex items-center gap-3">
-            <FiltrosMovil consulta={consulta} facetas={facetas} total={resultado.total} />
+            <FiltrosMovil consulta={consulta} facetas={facetas} total={resultado.total} conAtributos={capacidades().atributos} />
             <OrdenSelect consulta={consulta} />
           </div>
         </div>

@@ -13,7 +13,7 @@ import { Faq } from '@/features/marketing/faq';
 import { LandingHero } from '@/features/marketing/landing-hero';
 import { Pasos } from '@/features/marketing/pasos';
 import { TarjetasEnlace } from '@/features/marketing/tarjetas-enlace';
-import { obtenerRepositorio } from '@/infrastructure/repositorio';
+import { capacidades, esperarSolicitud, obtenerRepositorio } from '@/infrastructure/repositorio';
 
 export const metadata: Metadata = {
   title: 'Semillas de flores, huerto y aromáticas',
@@ -23,7 +23,9 @@ export const metadata: Metadata = {
 const f = (clave: string, valor: string) => hrefCatalogo({ linea: 'semillas', filtros: { [clave]: [valor] } });
 
 export default async function SemillasPage() {
+  await esperarSolicitud();
   const repo = obtenerRepositorio();
+  const cap = capacidades();
   const [masVendidos, porMes] = await Promise.all([repo.masVendidos('semillas', 4), repo.semillasPorMes()]);
   // Solo datos serializables minimos hacia el componente cliente.
   const calendario = Object.fromEntries(
@@ -42,6 +44,7 @@ export default async function SemillasPage() {
         puntos={['Flores y huerto', 'Aromáticas para la cocina', 'Guía de siembra incluida']}
       />
 
+      {cap.atributos && (
       <section aria-label="Tipo de cultivo" className="py-16 sm:py-20">
         <Container>
           <SectionHeading etiqueta="Por cultivo" titulo="¿Qué quieres sembrar?" descripcion="Tres caminos para empezar, con o sin experiencia." />
@@ -60,7 +63,9 @@ export default async function SemillasPage() {
           </div>
         </Container>
       </section>
+      )}
 
+      {cap.atributos && (
       <section aria-label="Calendario de siembra" className="bg-sun-100/60 py-16 sm:py-20">
         <Container>
           <SectionHeading
@@ -71,11 +76,12 @@ export default async function SemillasPage() {
           <div className="mt-8"><CalendarioSiembra porMes={calendario} /></div>
         </Container>
       </section>
+      )}
 
-      <section aria-label="Más vendidas" className="py-16 sm:py-20">
+      <section aria-label={cap.masVendidos ? 'Más vendidas' : 'Novedades'} className="py-16 sm:py-20">
         <Container>
           <SectionHeading
-            etiqueta="Más vendidas"
+            etiqueta={cap.masVendidos ? 'Más vendidas' : 'Novedades'}
             titulo="Las que más se siembran"
             accion={<Button asChild variante="contorno" tamano="sm"><Link href={hrefCatalogo({ linea: 'semillas' })}>Ver todas</Link></Button>}
           />

@@ -15,21 +15,24 @@ export const normalizar = (s: string): string =>
 function valoresDe(p: Producto, clave: string): readonly string[] {
   switch (p.linea) {
     case 'ramos':
-      if (clave === 'ocasion') return p.ocasiones;
-      if (clave === 'color') return p.colores;
-      if (clave === 'flor') return p.tiposFlor;
+      if (clave === 'ocasion') return p.ocasiones ?? [];
+      if (clave === 'color') return p.colores ?? [];
+      if (clave === 'flor') return p.tiposFlor ?? [];
       return [];
     case 'plantas':
-      if (clave === 'cuidado') return [p.nivelCuidado];
-      if (clave === 'luz') return [p.luz];
+      if (clave === 'cuidado') return p.nivelCuidado ? [p.nivelCuidado] : [];
+      if (clave === 'luz') return p.luz ? [p.luz] : [];
       // "ambos" cubre interior y exterior: debe aparecer en ambos filtros.
-      if (clave === 'ubicacion') return p.ubicacion === 'ambos' ? ['interior', 'exterior', 'ambos'] : [p.ubicacion];
+      if (clave === 'ubicacion') {
+        if (!p.ubicacion) return [];
+        return p.ubicacion === 'ambos' ? ['interior', 'exterior', 'ambos'] : [p.ubicacion];
+      }
       if (clave === 'pet') return p.petFriendly ? ['si'] : [];
       return [];
     case 'semillas':
-      if (clave === 'cultivo') return [p.cultivo];
-      if (clave === 'uso') return [p.uso];
-      if (clave === 'mes') return p.mesesSiembra.map(String);
+      if (clave === 'cultivo') return p.cultivo ? [p.cultivo] : [];
+      if (clave === 'uso') return p.uso ? [p.uso] : [];
+      if (clave === 'mes') return (p.mesesSiembra ?? []).map(String);
       return [];
   }
 }
@@ -145,7 +148,7 @@ export class RepositorioMock implements ProductoRepositorio {
     for (const m of MESES) salida[m] = [];
     for (const p of this.datos) {
       if (p.linea !== 'semillas' || !p.disponible) continue;
-      for (const m of p.mesesSiembra) salida[m]?.push(p);
+      for (const m of p.mesesSiembra ?? []) salida[m]?.push(p);
     }
     return salida;
   }

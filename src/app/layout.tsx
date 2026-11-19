@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { AnnouncementBar, SiteHeader } from '@/components/layout/site-header';
 import { SiteFooter } from '@/components/layout/site-footer';
 import { SITIO } from '@/content/sitio';
+import { TiendaProvider } from '@/features/tienda/tienda-provider';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
@@ -24,10 +25,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         >
           Saltar al contenido
         </a>
-        <AnnouncementBar />
-        <SiteHeader />
-        <main id="contenido" tabIndex={-1} className="outline-none">{children}</main>
-        <SiteFooter />
+        <TiendaProvider>
+          <AnnouncementBar />
+          <SiteHeader />
+          <main id="contenido" tabIndex={-1} className="outline-none">{children}</main>
+          <SiteFooter />
+        </TiendaProvider>
       </body>
     </html>
   );

@@ -8,11 +8,26 @@ export function etiquetaOpcion(clave: string, valor: string): string {
   return FILTROS.find((f) => f.clave === clave)?.opciones.find((o) => o.valor === valor)?.etiqueta ?? valor;
 }
 
-/** Datos clave de una tarjeta, segun la linea (union discriminada: exhaustivo). */
+/** Datos clave de una tarjeta, segun la linea. Solo muestra lo que existe (el backend aun no tiene atributos). */
 export function atributosClave(p: Producto): readonly string[] {
+  const datos: string[] = [];
   switch (p.linea) {
-    case 'ramos': return [`Dura ~${p.duracionDias} días`, ...p.ocasiones.slice(0, 1).map((o) => etiquetaOpcion('ocasion', o))];
-    case 'plantas': return [etiquetaOpcion('cuidado', p.nivelCuidado), ...(p.petFriendly ? ['Pet-friendly'] : [])];
-    case 'semillas': return [`Germina en ${p.germinacionDias.min}–${p.germinacionDias.max} días`, etiquetaOpcion('uso', p.uso)];
+    case 'ramos':
+      if (p.duracionDias) datos.push(`Dura ~${p.duracionDias} días`);
+      if (p.ocasiones?.[0]) datos.push(etiquetaOpcion('ocasion', p.ocasiones[0]));
+      break;
+    case 'plantas':
+      if (p.nivelCuidado) datos.push(etiquetaOpcion('cuidado', p.nivelCuidado));
+      if (p.petFriendly) datos.push('Pet-friendly');
+      break;
+    case 'semillas':
+      if (p.germinacionDias) datos.push(`Germina en ${p.germinacionDias.min}–${p.germinacionDias.max} días`);
+      if (p.uso) datos.push(etiquetaOpcion('uso', p.uso));
+      break;
   }
+  // Escasez real (dato del servidor): ayuda a decidir sin inventar urgencia.
+  if (p.disponible && p.stockDisponible !== undefined && p.stockDisponible > 0 && p.stockDisponible <= 5) {
+    datos.push(`Quedan ${p.stockDisponible}`);
+  }
+  return datos;
 }

@@ -12,7 +12,12 @@ const base = (id: string, nombre: string, resumen: string, descripcion: string, 
   resumen,
   descripcion,
   precio: centavos(Math.round(usd * 100)),
-  imagenes: [] as const,
+  imagenes: id.startsWith('semilla-')
+    ? []
+    : [{
+        url: `/images/productos/${id.startsWith('ramo-') ? 'ramos' : 'plantas'}/${id}.jpg`,
+        alt: nombre,
+      }],
   disponible: true,
   destacado: false,
   masVendido: false,
@@ -33,7 +38,7 @@ const semilla = (
   x: Omit<Semilla, keyof ReturnType<typeof base> | 'linea'> & Partial<Pick<Semilla, 'destacado' | 'masVendido' | 'disponible'>>,
 ): Semilla => ({ ...r, linea: 'semillas', ...x });
 
-export const PRODUCTOS_MOCK: readonly Producto[] = [
+const BRUTOS: readonly Producto[] = [
   // ---------- RAMOS ----------
   ramo(base('ramo-aurora', 'Ramo Aurora', 'Rosas rojas con follaje verde', 'Docena de rosas rojas envueltas en papel kraft con eucalipto. Un clasico para decir te quiero.', 38), {
     ocasiones: ['aniversario', 'amor'], tiposFlor: ['rosas'], colores: ['rojo'], duracionDias: 7,
@@ -148,3 +153,11 @@ export const PRODUCTOS_MOCK: readonly Producto[] = [
     contenido: '20 semillas',
   }),
 ];
+
+/** Stock de la demostracion: lo bastante alto para probar cantidades; 0 si el producto esta marcado no disponible. */
+export const STOCK_DEMO = 20;
+
+/** `idProducto` estable (posicion + 1) para que el carrito de la demostracion funcione igual que con la API. */
+export const PRODUCTOS_MOCK: readonly Producto[] = BRUTOS.map(
+  (p, i): Producto => ({ ...p, idProducto: i + 1, stockDisponible: p.disponible ? STOCK_DEMO : 0 }),
+);

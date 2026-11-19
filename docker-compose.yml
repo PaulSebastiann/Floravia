@@ -69,9 +69,11 @@ services:
       Smtp__Usuario: ${SMTP_USUARIO:-}
       Smtp__Password: ${SMTP_PASSWORD:-}
       Smtp__Remitente: ${SMTP_REMITENTE:-}
-      # Descomenta SOLO si pones la API detras de un proxy inverso (nginx, Caddy, Traefik) que envia
-      # X-Forwarded-For: asi el limite de peticiones y la auditoria ven la IP real del cliente.
-      # ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      # El frontend (Next) llama a la API desde el servidor y le reenvia X-Forwarded-For con la IP real del
+      # visitante; sin esto el limite de 10 intentos/min por IP bloquearia a TODOS los clientes a la vez.
+      # ASPNETCORE_FORWARDEDHEADERS_ENABLED confia en cualquier proxy: es seguro SOLO mientras la API no
+      # sea alcanzable desde internet (aqui solo escucha en 127.0.0.1 y en la red interna de Docker).
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
     ports:
       # Solo local: expon la API a internet a traves de un proxy inverso con HTTPS.
       - "127.0.0.1:${API_PORT:-8081}:8080"
@@ -97,7 +99,9 @@ services:
     environment:
       NEXT_PUBLIC_SITE_URL: ${FRONTEND_URL:-http://localhost:3000}
       NEXT_PUBLIC_WHATSAPP: ${NEXT_PUBLIC_WHATSAPP:-5930000000000}
-      FLORAVIA_API_URL: ${FLORAVIA_API_URL:-}
+      # URL INTERNA de la API (red de Docker). Vacia = modo demostracion con datos de muestra y sin compra.
+      FLORAVIA_API_URL: ${FLORAVIA_API_URL:-http://api:8080}
+      FLORAVIA_COOKIE_SECURE: ${FLORAVIA_COOKIE_SECURE:-}
     ports:
       - "${WEB_PORT:-3000}:3000"
     networks:
