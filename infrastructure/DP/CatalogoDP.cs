@@ -88,7 +88,9 @@ public sealed class ProductoDP(Db db)
         p.stock, p.stock_reservado, p.stock_minimo, p.estado, p.creado_en, p.actualizado_en,
         c.nombre AS categoria_nombre,
         (SELECT i.ruta FROM imagen_producto i WHERE i.id_producto = p.id_producto
-          ORDER BY i.es_principal DESC, i.orden, i.id_imagen LIMIT 1) AS imagen_principal
+          ORDER BY i.es_principal DESC, i.orden, i.id_imagen LIMIT 1) AS imagen_principal,
+        COALESCE((SELECT ARRAY_AGG(pa.clave || ':' || pa.valor ORDER BY pa.clave, pa.valor)
+                    FROM producto_atributo pa WHERE pa.id_producto = p.id_producto), ARRAY[]::text[]) AS atributos
         """;
 
     private const string Desde = "FROM producto p JOIN categoria c ON c.id_categoria = p.id_categoria";
@@ -96,6 +98,55 @@ public sealed class ProductoDP(Db db)
     // ---------- Consultas (tienda y admin) ----------
 
     public async Task<ResultadoPagina<Producto>> BuscarAsync(FiltroProducto f)
+    {
+        var q = Condiciones(f);
+        var orden = f.Orden switch
+        {
+            "precio_asc" => "p.precio ASC, p.id_producto",
+            "precio_desc" => "p.precio DESC, p.id_producto",
+            "nombre" => "p.nombre ASC, p.id_producto",
+            _ => "p.creado_en DESC, p.id_producto DESC",
+        };
+
+        var pagina = Math.Max(1, f.Pagina);
+        var tamano = Math.Clamp(f.TamanoPagina, 1, 100);
+        q.Parametros.Add("limite", tamano);
+        q.Parametros.Add("desplazamiento", (pagina - 1) * tamano);
+
+        var total = await db.EscalarAsync<int>($"{q.Prefijo}SELECT COUNT(*)::int {Desde} {q.Where}", q.Parametros);
+        var items = await db.ListarAsync<Producto>(
+            $"{q.Prefijo}SELECT {Cols} {Desde} {q.Where} ORDER BY {orden} LIMIT @limite OFFSET @desplazamiento", q.Parametros);
+
+        return new ResultadoPagina<Producto>(items, total, pagina, tamano);
+    }
+
+    /// <summary>
+    /// Conteos para la UI de filtros. Para cada clave se respetan los demás filtros,
+    /// pero se excluye la propia clave: así se puede ampliar una selección (rojo + rosa)
+    /// sin que las demás opciones desaparezcan artificialmente.
+    /// </summary>
+    public async Task<List<FacetaProducto>> FacetasAsync(FiltroProducto f)
+    {
+        var claves = await db.ListarAsync<string>("SELECT DISTINCT clave FROM producto_atributo ORDER BY clave");
+        var resultado = new List<FacetaProducto>();
+        foreach (var clave in claves)
+        {
+            var q = Condiciones(f, clave);
+            q.Parametros.Add("claveFaceta", clave);
+            var valores = await db.ListarAsync<ValorFaceta>($"""
+                {q.Prefijo}SELECT pa.valor AS "Valor", COUNT(DISTINCT p.id_producto)::int AS "Cantidad"
+                {Desde}
+                JOIN producto_atributo pa ON pa.id_producto = p.id_producto
+                {q.Where}{(string.IsNullOrEmpty(q.Where) ? "WHERE" : "AND")} pa.clave = @claveFaceta
+                GROUP BY pa.clave, pa.valor
+                ORDER BY pa.valor
+                """, q.Parametros);
+            if (valores.Count > 0) resultado.Add(new FacetaProducto(clave, valores));
+        }
+        return resultado;
+    }
+
+    private (string Prefijo, string Where, DynamicParameters Parametros) Condiciones(FiltroProducto f, string? excluirAtributo = null)
     {
         var p = new DynamicParameters();
         var where = new List<string>();
@@ -107,7 +158,7 @@ public sealed class ProductoDP(Db db)
 
         if (f.IdCategoria is int cat)
         {
-            // Filtrar por "Planta" también trae los productos de "Bonsai" (subcategoría)
+            // Filtrar por "Planta" también trae los productos de "Bonsai" (subcategoría).
             prefijo = """
                 WITH RECURSIVE arbol AS (
                     SELECT id_categoria FROM categoria WHERE id_categoria = @cat
@@ -131,25 +182,23 @@ public sealed class ProductoDP(Db db)
             p.Add("color", color);
         }
 
-        var w = where.Count > 0 ? "WHERE " + string.Join(" AND ", where) : "";
-        var orden = f.Orden switch
+        var i = 0;
+        foreach (var (clave, valores) in f.Atributos.OrderBy(a => a.Key, StringComparer.Ordinal))
         {
-            "precio_asc" => "p.precio ASC, p.id_producto",
-            "precio_desc" => "p.precio DESC, p.id_producto",
-            "nombre" => "p.nombre ASC, p.id_producto",
-            _ => "p.creado_en DESC, p.id_producto DESC",
-        };
+            if (clave == excluirAtributo || valores.Count == 0) continue;
+            var indice = i++;
+            where.Add($"""
+                EXISTS (
+                    SELECT 1 FROM producto_atributo pa_f{indice}
+                    WHERE pa_f{indice}.id_producto = p.id_producto
+                      AND pa_f{indice}.clave = @attrClave{indice}
+                      AND pa_f{indice}.valor = ANY(@attrValores{indice}))
+                """);
+            p.Add($"attrClave{indice}", clave);
+            p.Add($"attrValores{indice}", valores.Distinct(StringComparer.Ordinal).ToArray());
+        }
 
-        var pagina = Math.Max(1, f.Pagina);
-        var tamano = Math.Clamp(f.TamanoPagina, 1, 100);
-        p.Add("limite", tamano);
-        p.Add("desplazamiento", (pagina - 1) * tamano);
-
-        var total = await db.EscalarAsync<int>($"{prefijo}SELECT COUNT(*)::int {Desde} {w}", p);
-        var items = await db.ListarAsync<Producto>(
-            $"{prefijo}SELECT {Cols} {Desde} {w} ORDER BY {orden} LIMIT @limite OFFSET @desplazamiento", p);
-
-        return new ResultadoPagina<Producto>(items, total, pagina, tamano);
+        return (prefijo, where.Count > 0 ? "WHERE " + string.Join(" AND ", where) : "", p);
     }
 
     private static string EscaparLike(string s) =>

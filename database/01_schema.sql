@@ -158,6 +158,21 @@ CREATE TABLE producto_color (
         REFERENCES color (id_color) ON DELETE RESTRICT
 );
 
+-- Atributos que hacen navegable el catálogo público. Una tabla genérica evita
+-- columnas nulas que solo aplicarían a una de las tres líneas de producto.
+-- Los valores permitidos se validan en la API y los datos iniciales están en
+-- 02_catalogo_tienda.sql.
+CREATE TABLE producto_atributo (
+    id_producto  INT         NOT NULL,
+    clave        VARCHAR(30) NOT NULL,
+    valor        VARCHAR(50) NOT NULL,
+    PRIMARY KEY (id_producto, clave, valor),
+    CONSTRAINT fk_pa_producto FOREIGN KEY (id_producto)
+        REFERENCES producto (id_producto) ON DELETE CASCADE,
+    CONSTRAINT ck_pa_clave CHECK (clave IN ('ocasion', 'color', 'flor', 'cuidado', 'luz', 'ubicacion', 'pet', 'cultivo', 'uso', 'mes')),
+    CONSTRAINT ck_pa_valor_no_vacio CHECK (BTRIM(valor) <> '')
+);
+
 CREATE TABLE imagen_producto (
     id_imagen    INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     id_producto  INT          NOT NULL,
@@ -381,6 +396,7 @@ CREATE INDEX ix_direccion_cliente   ON direccion (id_cliente);
 CREATE INDEX ix_auditoria_fecha     ON auditoria (fecha);
 CREATE INDEX ix_item_producto       ON item_carrito (id_producto);
 CREATE INDEX ix_pc_color            ON producto_color (id_color);
+CREATE INDEX ix_pa_clave_valor       ON producto_atributo (clave, valor, id_producto);
 
 -- =====================================================================
 -- 9. DATOS SEMILLA

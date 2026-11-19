@@ -19,6 +19,9 @@ public static class TiendaEndpoints
         g.MapGet("/productos", async ([AsParameters] ProductosQuery q, FloraviaServicios s) =>
             Results.Ok(Mapeos.Publico(await s.Catalogo.ListarProductosAsync(Mapeos.Filtro(q)))));
 
+        g.MapGet("/productos/facetas", async ([AsParameters] ProductosQuery q, FloraviaServicios s) =>
+            Results.Ok(await s.Catalogo.ListarFacetasAsync(Mapeos.Filtro(q))));
+
         g.MapGet("/productos/novedades", async (int? cantidad, FloraviaServicios s) =>
             Results.Ok((await s.Catalogo.ListarNovedadesAsync(cantidad ?? 8)).Select(Mapeos.Publico)));
 

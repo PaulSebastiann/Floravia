@@ -11,10 +11,12 @@ export interface ColorDto { idColor: number; nombre: string; codigoHex: string |
 export interface ProductoPublicoDto {
   idProducto: number; idCategoria: number; codigo: string; nombre: string; descripcion: string | null;
   cuidados: string | null; precio: number; stockDisponible: number; categoriaNombre: string | null; imagenUrl: string | null;
+  atributos: Record<string, string[]>;
 }
 export interface ImagenPublicaDto { idImagen: number; url: string; esPrincipal: boolean; orden: number }
 export interface ProductoDetallePublicoDto { producto: ProductoPublicoDto; imagenes: ImagenPublicaDto[]; colores: ColorDto[] }
 export interface PaginaProductosDto { items: ProductoPublicoDto[]; total: number; pagina: number; tamanoPagina: number; totalPaginas: number }
+export interface FacetaDto { clave: string; valores: Array<{ valor: string; cantidad: number }> }
 
 export interface ItemCarritoDto {
   idItem: number; idCarrito: number; idProducto: number; cantidad: number; precioUnitario: number; subtotal: number;

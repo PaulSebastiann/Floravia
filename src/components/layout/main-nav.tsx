@@ -8,13 +8,14 @@ import { cn } from '@/lib/cn';
 import { NAV_EXTRA, NAV_LINEAS, type LineaNav } from './nav-data';
 
 const ARTE = {
-  ramos: '/images/productos/ramos/ramo-girasol.jpg',
+  ramos: '/images/productos/ramos/ramo-ternura.jpg',
   plantas: '/images/productos/plantas/planta-monstera.jpg',
-  semillas: '/images/productos/plantas/planta-lavanda.jpg',
+  semillas: '/images/landing/bouquet-color.jpg',
 } as const;
 
 function Panel({ item, id }: { item: LineaNav; id: string }) {
   const foto = ARTE[item.linea];
+  const alt = item.linea === 'semillas' ? 'Flores coloridas para cultivar desde semilla' : 'Producto destacado de la tienda';
   return (
     <div id={id} className="absolute inset-x-0 top-full z-40 border-b border-line bg-cream-50 shadow-lift animate-fade-in">
       <div className="mx-auto grid max-w-7xl grid-cols-[1.1fr_2fr_0.9fr] gap-10 px-8 py-8">
@@ -43,7 +44,7 @@ function Panel({ item, id }: { item: LineaNav; id: string }) {
         </div>
         <div className="overflow-hidden rounded-card">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={foto} alt="Producto destacado de la tienda" className="aspect-square size-full object-cover" />
+          <img src={foto} alt={alt} className="aspect-square size-full object-cover" />
         </div>
       </div>
     </div>

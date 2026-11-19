@@ -30,6 +30,12 @@ public class Producto
     // Datos del join (listados)
     public string? CategoriaNombre { get; set; }
     public string? ImagenPrincipal { get; set; }
+    /// <summary>
+    /// Atributos estructurados del catálogo (p. ej. ocasion=amor o cultivo=huerto).
+    /// Se cargan junto con el producto para que la vitrina no dependa de reglas deducidas
+    /// del nombre o de la descripción.
+    /// </summary>
+    public string[] Atributos { get; set; } = [];
 }
 
 public class Color
@@ -63,6 +69,8 @@ public class FiltroProducto
     public decimal? PrecioMin { get; set; }
     public decimal? PrecioMax { get; set; }
     public int? IdColor { get; set; }
+    /// <summary>Valores seleccionados por atributo. OR dentro de una clave y AND entre claves.</summary>
+    public Dictionary<string, List<string>> Atributos { get; set; } = [];
     public bool SoloActivos { get; set; } = true;  // la tienda solo ve activos
     public bool SoloConStock { get; set; }
     public bool StockBajo { get; set; }            // disponible <= stock mínimo
@@ -70,6 +78,9 @@ public class FiltroProducto
     public int Pagina { get; set; } = 1;
     public int TamanoPagina { get; set; } = 12;
 }
+
+public record ValorFaceta(string Valor, int Cantidad);
+public record FacetaProducto(string Clave, List<ValorFaceta> Valores);
 
 public record ResultadoPagina<T>(List<T> Items, int Total, int Pagina, int TamanoPagina)
 {

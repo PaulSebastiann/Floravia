@@ -1,12 +1,12 @@
 import 'server-only';
 import { TAMANO_PAGINA, type ConsultaCatalogo } from '@/domain/filtros';
-import type { Linea, Producto } from '@/domain/producto';
+import type { ColorFlor, Cultivo, Linea, Luz, NivelCuidado, Ocasion, Producto, Ubicacion, UsoSemilla } from '@/domain/producto';
 import type {
   Faceta, Pagina, ProductoRepositorio, Sugerencia,
 } from '@/domain/puertos/producto-repositorio';
 import { apiFetch } from './cliente-api';
 import type {
-  CategoriaDto, PaginaProductosDto, ProductoDetallePublicoDto, ProductoPublicoDto,
+  CategoriaDto, FacetaDto, PaginaProductosDto, ProductoDetallePublicoDto, ProductoPublicoDto,
 } from './dto';
 import { aCentavos, urlMedia } from './mapeos';
 import { idDeSlug, slugDe } from './slug';
@@ -14,14 +14,13 @@ import { idDeSlug, slugDe } from './slug';
 /**
  * Adaptador HTTP del catalogo contra la API .NET.
  *
- * LIMITACIONES REALES DEL BACKEND (no del adaptador):
+ * Compatibilidad del backend:
  *  - No hay `slug`: se deriva `nombre-slug-{idProducto}` y se recupera el id del final.
  *  - No hay "linea": se deduce de la categoria RAIZ por nombre (Flor->ramos, Planta/Bonsai->plantas, Semilla->semillas).
  *    Productos en una categoria raiz con otro nombre se OMITEN y se avisa por consola.
- *  - No hay atributos (cuidado, luz, ocasion...): los filtros por atributo no se aplican y las facetas van vacias.
  *  - No hay "destacado" ni "mas vendido": se usan los mas recientes.
  */
-export const capacidadesApi = { atributos: false, masVendidos: false } as const;
+export const capacidadesApi = { atributos: true, masVendidos: false } as const;
 
 const norm = (s: string): string => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
@@ -33,8 +32,8 @@ function lineaDeNombre(nombreRaiz: string): Linea | undefined {
   return undefined;
 }
 
-const COLORES_FLOR: Record<string, 'rojo' | 'rosa' | 'blanco' | 'amarillo' | 'naranja' | 'morado'> = {
-  rojo: 'rojo', rosado: 'rosa', rosa: 'rosa', blanco: 'blanco', amarillo: 'amarillo', naranja: 'naranja', morado: 'morado',
+const COLORES_FLOR: Record<string, ColorFlor> = {
+  rojo: 'rojo', rosado: 'rosa', rosa: 'rosa', blanco: 'blanco', amarillo: 'amarillo', naranja: 'naranja', morado: 'morado', multicolor: 'multicolor',
 };
 
 interface MapaCategorias {
@@ -97,13 +96,41 @@ function mapear(
     destacado: false,
     masVendido: false,
   };
+  const atributos = p.atributos ?? {};
+  const valores = (clave: string) => atributos[clave] ?? [];
   if (linea === 'ramos') {
-    const colores = (extra?.colores ?? [])
-      .map((c) => COLORES_FLOR[norm(c.nombre)])
-      .filter((c): c is NonNullable<typeof c> => c !== undefined);
-    return { ...base, linea, colores: colores.length ? colores : undefined };
+    const colores = [...valores('color'), ...(extra?.colores ?? []).map((c) => norm(c.nombre))]
+      .map((c) => COLORES_FLOR[norm(c)])
+      .filter((c): c is ColorFlor => c !== undefined);
+    const ocasiones = valores('ocasion').filter((v) =>
+      ['aniversario', 'cumpleanos', 'amor', 'agradecimiento', 'condolencias'].includes(v)) as Ocasion[];
+    return {
+      ...base, linea, ocasiones: ocasiones.length ? ocasiones : undefined, tiposFlor: valores('flor'),
+      colores: colores.length ? [...new Set(colores)] : undefined,
+    };
   }
-  return { ...base, linea };
+  if (linea === 'plantas') {
+    const cuidado = valores('cuidado')[0];
+    const luz = valores('luz')[0];
+    const ubicacion = valores('ubicacion')[0];
+    return {
+      ...base, linea,
+      nivelCuidado: cuidado === 'facil' || cuidado === 'medio' || cuidado === 'experto' ? cuidado as NivelCuidado : undefined,
+      luz: luz === 'sombra' || luz === 'luz-indirecta' || luz === 'sol-directo' ? luz as Luz : undefined,
+      ubicacion: ubicacion === 'interior' || ubicacion === 'exterior' || ubicacion === 'ambos' ? ubicacion as Ubicacion : undefined,
+      petFriendly: valores('pet').includes('si') || undefined,
+    };
+  }
+  const cultivo = valores('cultivo')[0];
+  const uso = valores('uso')[0];
+  const mesesSiembra = valores('mes').map(Number).filter((m): m is 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 =>
+    Number.isInteger(m) && m >= 1 && m <= 12);
+  return {
+    ...base, linea,
+    cultivo: cultivo === 'flores' || cultivo === 'huerto' || cultivo === 'aromaticas' ? cultivo as Cultivo : undefined,
+    uso: uso === 'comestible' || uso === 'ornamental' ? uso as UsoSemilla : undefined,
+    mesesSiembra: mesesSiembra.length ? mesesSiembra : undefined,
+  };
 }
 
 const ORDEN_API: Record<ConsultaCatalogo['orden'], string> = {
@@ -118,7 +145,7 @@ export class HttpProductoRepositorio implements ProductoRepositorio {
 
     const r = await apiFetch<PaginaProductosDto>('/api/productos', {
       revalidar: 0, signal,
-      query: { idCategoria, texto: c.q, orden: ORDEN_API[c.orden], pagina: c.pagina, tamanoPagina: TAMANO_PAGINA },
+      query: { idCategoria, texto: c.q, orden: ORDEN_API[c.orden], pagina: c.pagina, tamanoPagina: TAMANO_PAGINA, filtro: serializarFiltros(c) },
     });
     const items = r.datos.items.map((p) => mapear(p, mapa)).filter((p): p is Producto => p !== null);
     return { items, total: r.datos.total, pagina: r.datos.pagina, totalPaginas: Math.max(1, r.datos.totalPaginas) };
@@ -164,8 +191,15 @@ export class HttpProductoRepositorio implements ProductoRepositorio {
     return r.datos.map((p) => mapear(p, mapa)).filter((p): p is Producto => p !== null);
   }
 
-  async facetas(): Promise<readonly Faceta[]> {
-    return []; // el backend no tiene atributos: ver capacidadesApi
+  async facetas(linea: Linea, c: ConsultaCatalogo, signal?: AbortSignal): Promise<readonly Faceta[]> {
+    const mapa = await categorias();
+    const idCategoria = mapa.raizPorLinea.get(linea);
+    if (idCategoria === undefined) return [];
+    const r = await apiFetch<FacetaDto[]>('/api/productos/facetas', {
+      revalidar: 0, signal,
+      query: { idCategoria, texto: c.q, filtro: serializarFiltros(c) },
+    });
+    return r.datos;
   }
 
   async sugerir(termino: string, limite: number, signal?: AbortSignal): Promise<readonly Sugerencia[]> {
@@ -180,6 +214,17 @@ export class HttpProductoRepositorio implements ProductoRepositorio {
   }
 
   async semillasPorMes(): Promise<Readonly<Record<number, readonly Producto[]>>> {
-    return {}; // sin meses de siembra en el backend
+    const pagina = await this.listar({ linea: 'semillas', filtros: {}, orden: 'relevancia', pagina: 1 });
+    const resultado: Record<number, Producto[]> = {};
+    for (const producto of pagina.items) {
+      if (producto.linea !== 'semillas') continue;
+      for (const mes of producto.mesesSiembra ?? []) (resultado[mes] ??= []).push(producto);
+    }
+    return resultado;
   }
+}
+
+/** Formato HTTP interno. La URL visible sigue usando ?ocasion=amor, más legible y compartible. */
+function serializarFiltros(c: ConsultaCatalogo): string[] {
+  return Object.entries(c.filtros).flatMap(([clave, valores]) => valores.map((valor) => `${clave}:${valor}`));
 }

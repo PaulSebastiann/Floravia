@@ -5,7 +5,7 @@ namespace Api.Servicios;
 /// <summary>Parámetros de búsqueda del catálogo público (?texto=rosa&amp;idCategoria=1&amp;orden=precio_asc&amp;pagina=2...).</summary>
 public record ProductosQuery(
     int? IdCategoria, string? Texto, decimal? PrecioMin, decimal? PrecioMax, int? IdColor,
-    bool? SoloConStock, string? Orden, int? Pagina, int? TamanoPagina);
+    bool? SoloConStock, string? Orden, int? Pagina, int? TamanoPagina, string[]? Filtro);
 
 /// <summary>Igual que el público, más los filtros propios del panel de administración.</summary>
 public record ProductosAdminQuery(
@@ -15,7 +15,8 @@ public record ProductosAdminQuery(
 /// <summary>Lo que ve el público de un producto: nunca incluye stock mínimo ni stock reservado.</summary>
 public record ProductoPublico(
     int IdProducto, int IdCategoria, string Codigo, string Nombre, string? Descripcion, string? Cuidados,
-    decimal Precio, int StockDisponible, string? CategoriaNombre, string? ImagenUrl);
+    decimal Precio, int StockDisponible, string? CategoriaNombre, string? ImagenUrl,
+    IReadOnlyDictionary<string, string[]> Atributos);
 
 public record ImagenPublica(int IdImagen, string Url, bool EsPrincipal, int Orden);
 
@@ -39,7 +40,7 @@ public static class Mapeos
 
     public static ProductoPublico Publico(Producto p) => new(
         p.IdProducto, p.IdCategoria, p.Codigo, p.Nombre, p.Descripcion, p.Cuidados,
-        p.Precio, p.StockDisponible, p.CategoriaNombre, UrlImagen(p.ImagenPrincipal));
+        p.Precio, p.StockDisponible, p.CategoriaNombre, UrlImagen(p.ImagenPrincipal), AtributosDe(p));
 
     public static PaginaProductos Publico(ResultadoPagina<Producto> r) => new(
         r.Items.Select(Publico).ToList(), r.Total, r.Pagina, r.TamanoPagina, r.TotalPaginas);
@@ -56,6 +57,7 @@ public static class Mapeos
         PrecioMin = q.PrecioMin,
         PrecioMax = q.PrecioMax,
         IdColor = q.IdColor,
+        Atributos = AtributosValidos(q.Filtro),
         SoloConStock = q.SoloConStock ?? false,
         Orden = OrdenValido(q.Orden),
         Pagina = Math.Max(1, q.Pagina ?? 1),
@@ -85,4 +87,40 @@ public static class Mapeos
 
     private static string OrdenValido(string? orden) =>
         orden is "precio_asc" or "precio_desc" or "nombre" ? orden : "recientes";
+
+    private static readonly IReadOnlyDictionary<string, ISet<string>> ValoresAtributo =
+        new Dictionary<string, ISet<string>>(StringComparer.Ordinal)
+        {
+            ["ocasion"] = new HashSet<string>(["aniversario", "cumpleanos", "amor", "agradecimiento", "condolencias"], StringComparer.Ordinal),
+            ["color"] = new HashSet<string>(["rojo", "rosa", "blanco", "amarillo", "naranja", "morado", "multicolor"], StringComparer.Ordinal),
+            ["flor"] = new HashSet<string>(["rosas", "girasoles", "lirios", "gerberas", "tulipanes", "mixtas"], StringComparer.Ordinal),
+            ["cuidado"] = new HashSet<string>(["facil", "medio", "experto"], StringComparer.Ordinal),
+            ["luz"] = new HashSet<string>(["sombra", "luz-indirecta", "sol-directo"], StringComparer.Ordinal),
+            ["ubicacion"] = new HashSet<string>(["interior", "exterior", "ambos"], StringComparer.Ordinal),
+            ["pet"] = new HashSet<string>(["si"], StringComparer.Ordinal),
+            ["cultivo"] = new HashSet<string>(["flores", "huerto", "aromaticas"], StringComparer.Ordinal),
+            ["uso"] = new HashSet<string>(["comestible", "ornamental"], StringComparer.Ordinal),
+            ["mes"] = new HashSet<string>(Enumerable.Range(1, 12).Select(x => x.ToString()), StringComparer.Ordinal),
+        };
+
+    /** Solo acepta la misma taxonomía que la UI: nunca convierte query strings arbitrarios en filtros de BD. */
+    private static Dictionary<string, List<string>> AtributosValidos(IEnumerable<string>? filtros)
+    {
+        var resultado = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var filtro in filtros ?? [])
+        {
+            var partes = filtro.Split(':', 2, StringSplitOptions.TrimEntries);
+            if (partes.Length != 2 || !ValoresAtributo.TryGetValue(partes[0], out var permitidos) || !permitidos.Contains(partes[1])) continue;
+            if (!resultado.TryGetValue(partes[0], out var valores)) resultado[partes[0]] = valores = [];
+            if (!valores.Contains(partes[1], StringComparer.Ordinal)) valores.Add(partes[1]);
+        }
+        return resultado;
+    }
+
+    private static IReadOnlyDictionary<string, string[]> AtributosDe(Producto p) =>
+        p.Atributos
+            .Select(a => a.Split(':', 2))
+            .Where(a => a.Length == 2 && ValoresAtributo.TryGetValue(a[0], out var permitidos) && permitidos.Contains(a[1]))
+            .GroupBy(a => a[0], StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.Select(a => a[1]).ToArray(), StringComparer.Ordinal);
 }

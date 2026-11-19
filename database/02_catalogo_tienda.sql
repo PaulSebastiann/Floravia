@@ -5,6 +5,19 @@ SET search_path TO floravia;
 
 BEGIN;
 
+-- Migración idempotente para instalaciones que ya tenían la base creada.
+CREATE TABLE IF NOT EXISTS producto_atributo (
+    id_producto  INT         NOT NULL,
+    clave        VARCHAR(30) NOT NULL,
+    valor        VARCHAR(50) NOT NULL,
+    PRIMARY KEY (id_producto, clave, valor),
+    CONSTRAINT fk_pa_producto FOREIGN KEY (id_producto)
+        REFERENCES producto (id_producto) ON DELETE CASCADE,
+    CONSTRAINT ck_pa_clave CHECK (clave IN ('ocasion', 'color', 'flor', 'cuidado', 'luz', 'ubicacion', 'pet', 'cultivo', 'uso', 'mes')),
+    CONSTRAINT ck_pa_valor_no_vacio CHECK (BTRIM(valor) <> '')
+);
+CREATE INDEX IF NOT EXISTS ix_pa_clave_valor ON producto_atributo (clave, valor, id_producto);
+
 -- Parámetro añadido también para instalaciones cuyo volumen ya existía.
 INSERT INTO parametro (clave, valor, descripcion)
 VALUES ('REVISION_TRANSFERENCIA_HORAS', '48', 'Horas para revisar un comprobante sin liberar el stock')
@@ -110,6 +123,43 @@ FROM (VALUES
 ) AS semilla(codigo_producto, nombre_color)
 JOIN producto p ON p.codigo = semilla.codigo_producto
 JOIN color c ON c.nombre = semilla.nombre_color
+ON CONFLICT DO NOTHING;
+
+-- Atributos que alimentan los filtros reales de la vitrina. No se infieren del
+-- texto: cada opción del menú corresponde a datos consultables en PostgreSQL.
+INSERT INTO producto_atributo (id_producto, clave, valor)
+SELECT p.id_producto, a.clave, a.valor
+FROM (VALUES
+    ('ramo-aurora', 'ocasion', 'aniversario'), ('ramo-aurora', 'ocasion', 'amor'), ('ramo-aurora', 'color', 'rojo'), ('ramo-aurora', 'flor', 'rosas'),
+    ('ramo-girasol', 'ocasion', 'cumpleanos'), ('ramo-girasol', 'ocasion', 'agradecimiento'), ('ramo-girasol', 'color', 'amarillo'), ('ramo-girasol', 'flor', 'girasoles'),
+    ('ramo-nube', 'ocasion', 'condolencias'), ('ramo-nube', 'color', 'blanco'), ('ramo-nube', 'flor', 'lirios'),
+    ('ramo-ternura', 'ocasion', 'aniversario'), ('ramo-ternura', 'ocasion', 'amor'), ('ramo-ternura', 'color', 'rosa'), ('ramo-ternura', 'flor', 'rosas'),
+    ('ramo-fiesta', 'ocasion', 'cumpleanos'), ('ramo-fiesta', 'color', 'multicolor'), ('ramo-fiesta', 'flor', 'gerberas'),
+    ('ramo-primavera', 'ocasion', 'cumpleanos'), ('ramo-primavera', 'color', 'morado'), ('ramo-primavera', 'flor', 'tulipanes'),
+    ('ramo-atardecer', 'ocasion', 'agradecimiento'), ('ramo-atardecer', 'color', 'naranja'), ('ramo-atardecer', 'flor', 'rosas'),
+    ('ramo-eterno', 'ocasion', 'aniversario'), ('ramo-eterno', 'ocasion', 'amor'), ('ramo-eterno', 'color', 'rojo'), ('ramo-eterno', 'flor', 'rosas'),
+    ('ramo-lirio', 'ocasion', 'condolencias'), ('ramo-lirio', 'color', 'blanco'), ('ramo-lirio', 'flor', 'lirios'),
+
+    ('planta-suculenta-echeveria', 'cuidado', 'facil'), ('planta-suculenta-echeveria', 'luz', 'sol-directo'), ('planta-suculenta-echeveria', 'ubicacion', 'interior'), ('planta-suculenta-echeveria', 'pet', 'si'),
+    ('planta-pothos', 'cuidado', 'facil'), ('planta-pothos', 'luz', 'luz-indirecta'), ('planta-pothos', 'ubicacion', 'interior'),
+    ('planta-sansevieria', 'cuidado', 'facil'), ('planta-sansevieria', 'luz', 'sombra'), ('planta-sansevieria', 'ubicacion', 'interior'),
+    ('planta-monstera', 'cuidado', 'medio'), ('planta-monstera', 'luz', 'luz-indirecta'), ('planta-monstera', 'ubicacion', 'interior'),
+    ('planta-calathea', 'cuidado', 'experto'), ('planta-calathea', 'luz', 'luz-indirecta'), ('planta-calathea', 'ubicacion', 'interior'), ('planta-calathea', 'pet', 'si'),
+    ('planta-helecho', 'cuidado', 'medio'), ('planta-helecho', 'luz', 'luz-indirecta'), ('planta-helecho', 'ubicacion', 'interior'), ('planta-helecho', 'pet', 'si'),
+    ('planta-lavanda', 'cuidado', 'medio'), ('planta-lavanda', 'luz', 'sol-directo'), ('planta-lavanda', 'ubicacion', 'exterior'),
+    ('planta-bonsai-ficus', 'cuidado', 'experto'), ('planta-bonsai-ficus', 'luz', 'luz-indirecta'), ('planta-bonsai-ficus', 'ubicacion', 'interior'),
+    ('planta-aloe', 'cuidado', 'facil'), ('planta-aloe', 'luz', 'sol-directo'), ('planta-aloe', 'ubicacion', 'interior'),
+
+    ('semilla-girasol', 'cultivo', 'flores'), ('semilla-girasol', 'uso', 'ornamental'), ('semilla-girasol', 'mes', '1'), ('semilla-girasol', 'mes', '2'), ('semilla-girasol', 'mes', '9'), ('semilla-girasol', 'mes', '10'),
+    ('semilla-albahaca', 'cultivo', 'aromaticas'), ('semilla-albahaca', 'uso', 'comestible'), ('semilla-albahaca', 'mes', '1'), ('semilla-albahaca', 'mes', '2'), ('semilla-albahaca', 'mes', '9'), ('semilla-albahaca', 'mes', '10'),
+    ('semilla-cilantro', 'cultivo', 'aromaticas'), ('semilla-cilantro', 'uso', 'comestible'), ('semilla-cilantro', 'mes', '1'), ('semilla-cilantro', 'mes', '2'), ('semilla-cilantro', 'mes', '3'), ('semilla-cilantro', 'mes', '9'), ('semilla-cilantro', 'mes', '10'), ('semilla-cilantro', 'mes', '11'),
+    ('semilla-lechuga', 'cultivo', 'huerto'), ('semilla-lechuga', 'uso', 'comestible'), ('semilla-lechuga', 'mes', '1'), ('semilla-lechuga', 'mes', '2'), ('semilla-lechuga', 'mes', '3'), ('semilla-lechuga', 'mes', '9'), ('semilla-lechuga', 'mes', '10'), ('semilla-lechuga', 'mes', '11'),
+    ('semilla-tomate', 'cultivo', 'huerto'), ('semilla-tomate', 'uso', 'comestible'), ('semilla-tomate', 'mes', '2'), ('semilla-tomate', 'mes', '3'), ('semilla-tomate', 'mes', '8'), ('semilla-tomate', 'mes', '9'), ('semilla-tomate', 'mes', '10'),
+    ('semilla-cosmos', 'cultivo', 'flores'), ('semilla-cosmos', 'uso', 'ornamental'), ('semilla-cosmos', 'mes', '1'), ('semilla-cosmos', 'mes', '2'), ('semilla-cosmos', 'mes', '9'), ('semilla-cosmos', 'mes', '10'),
+    ('semilla-menta', 'cultivo', 'aromaticas'), ('semilla-menta', 'uso', 'comestible'), ('semilla-menta', 'mes', '1'), ('semilla-menta', 'mes', '2'), ('semilla-menta', 'mes', '3'), ('semilla-menta', 'mes', '9'), ('semilla-menta', 'mes', '10'), ('semilla-menta', 'mes', '11'),
+    ('semilla-capuchina', 'cultivo', 'flores'), ('semilla-capuchina', 'uso', 'comestible'), ('semilla-capuchina', 'mes', '1'), ('semilla-capuchina', 'mes', '2'), ('semilla-capuchina', 'mes', '9'), ('semilla-capuchina', 'mes', '10')
+) AS a(codigo_producto, clave, valor)
+JOIN producto p ON p.codigo = a.codigo_producto
 ON CONFLICT DO NOTHING;
 
 COMMIT;

@@ -32,6 +32,12 @@ public sealed class CatalogoMD(ProductoDP productos, CategoriaDP categorias, Col
     public Task<List<Producto>> ListarRelacionadosAsync(int idProducto, int cantidad = 4) =>
         productos.RelacionadosAsync(idProducto, Math.Clamp(cantidad, 1, 20));
 
+    public Task<List<FacetaProducto>> ListarFacetasAsync(FiltroProducto filtro)
+    {
+        filtro.SoloActivos = true;
+        return productos.FacetasAsync(filtro);
+    }
+
     /// <summary>Últimos productos agregados que aún tienen stock (portada).</summary>
     public async Task<List<Producto>> ListarNovedadesAsync(int cantidad = 8) =>
         (await productos.BuscarAsync(new FiltroProducto

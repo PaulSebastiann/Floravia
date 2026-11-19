@@ -6,7 +6,7 @@ import type { ProblemaDto } from './dto';
 
 export interface OpcionesApi {
   readonly metodo?: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  readonly query?: Readonly<Record<string, string | number | boolean | undefined>>;
+  readonly query?: Readonly<Record<string, string | number | boolean | readonly (string | number | boolean)[] | undefined>>;
   readonly json?: unknown;
   readonly formData?: FormData;
   readonly jwt?: string;
@@ -40,7 +40,11 @@ export async function apiFetch<T>(ruta: string, o: OpcionesApi = {}): Promise<Re
 
   const url = new URL(base + ruta);
   for (const [k, v] of Object.entries(o.query ?? {})) {
-    if (v !== undefined && v !== '') url.searchParams.set(k, String(v));
+    if (Array.isArray(v)) {
+      for (const valor of v) if (valor !== '') url.searchParams.append(k, String(valor));
+    } else if (v !== undefined && v !== '') {
+      url.searchParams.set(k, String(v));
+    }
   }
 
   const cab = new Headers({ Accept: 'application/json' });
