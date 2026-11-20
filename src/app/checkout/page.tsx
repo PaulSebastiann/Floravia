@@ -7,7 +7,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Alerta } from '@/components/ui/campo';
 import { mensajeUsuario } from '@/infrastructure/api/errores';
 import { tienda } from '@/infrastructure/tienda';
-import { AvisoDemo } from '@/features/tienda/aviso-demo';
 import { CheckoutForm } from '@/features/tienda/checkout-form';
 import { exigirSesion } from '@/features/tienda/cuenta-guard';
 
@@ -33,7 +32,6 @@ export default async function CheckoutPage() {
   return (
     <Container className="py-8 sm:py-12">
       <h1 className="font-display text-4xl font-semibold text-moss-900">Finalizar compra</h1>
-      <AvisoDemo className="mt-4" />
       <div className="mt-8">
         {datos.carrito.lineas.length === 0 ? (
           <EmptyState

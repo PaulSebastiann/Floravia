@@ -31,8 +31,7 @@ export function PanelReintento({ idPedido, metodos, total, inicial }: {
     const archivo = fd.get('comprobante');
     if (fd.get('metodo') === 'TRANSFERENCIA') {
       const hayArchivo = archivo instanceof File && archivo.size > 0;
-      // Demostracion: el comprobante es opcional; si se adjunta, se valida igual.
-      const e = metodos.ficticio && !hayArchivo ? undefined : validarComprobante(archivo instanceof File ? archivo : null);
+      const e = validarComprobante(hayArchivo && archivo instanceof File ? archivo : null);
       if (e) { setErrorLocal(e); return; }
     }
     if (!(archivo instanceof File) || archivo.size === 0) fd.delete('comprobante'); // input vacio: no mandar un File de 0 bytes
@@ -47,7 +46,7 @@ export function PanelReintento({ idPedido, metodos, total, inicial }: {
       <div ref={aviso} tabIndex={-1} className="outline-none">
         {(errorLocal || estado.error) && <Alerta>{errorLocal ?? estado.error}</Alerta>}
       </div>
-      <PanelPago metodos={metodos} errores={estado.errores ?? {}} total={total} inicial={inicial} comprobanteObligatorio={!metodos.ficticio} deshabilitado={ocupado} />
+      <PanelPago metodos={metodos} errores={estado.errores ?? {}} total={total} inicial={inicial} comprobanteObligatorio deshabilitado={ocupado} />
       <Button type="submit" tamano="lg" cargando={ocupado}><Lock className="size-5" aria-hidden="true" />Pagar este pedido</Button>
     </form>
   );

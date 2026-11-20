@@ -83,7 +83,6 @@ function mapear(
   const base = {
     id: String(p.idProducto),
     idProducto: p.idProducto,
-    fuente: 'api' as const,
     slug: slugDe(p.nombre, p.idProducto),
     nombre: p.nombre,
     resumen: resumenDe(p.descripcion),

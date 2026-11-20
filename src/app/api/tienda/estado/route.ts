@@ -3,7 +3,7 @@ import { CARRITO_VACIO } from '@/domain/carrito';
 import { ApiError } from '@/infrastructure/api/errores';
 import { COOKIE_CARRITO, COOKIE_NOMBRE, COOKIE_SESION } from '@/infrastructure/api/config';
 import { leerSesion } from '@/infrastructure/api/sesion';
-import { modoDemo, tienda } from '@/infrastructure/tienda';
+import { tienda } from '@/infrastructure/tienda';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,7 +18,7 @@ export async function GET() {
   let limpiarCookiesViejas = false;
   try {
     // Leer el payload no verifica la firma. La API es quien confirma que la cuenta existe
-    // y que el JWT fue emitido con la clave actual (descarta sesiones del antiguo modo demo).
+    // y que el JWT fue emitido con la clave actual (descarta sesiones antiguas o inválidas).
     if (sesion) {
       try {
         const cliente = await tienda().perfil();
@@ -40,7 +40,7 @@ export async function GET() {
       { status: 503, headers: cab },
     );
   }
-  const respuesta = NextResponse.json({ sesion, carrito, compra: true, demo: modoDemo() }, { headers: cab });
+  const respuesta = NextResponse.json({ sesion, carrito, compra: true }, { headers: cab });
   if (limpiarCookiesViejas) {
     respuesta.cookies.delete(COOKIE_SESION);
     respuesta.cookies.delete(COOKIE_NOMBRE);

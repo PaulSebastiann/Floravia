@@ -10,7 +10,6 @@ import { formatearUSD } from '@/domain/dinero';
 import { admitePago, estaConfirmado, ETIQUETA_ESTADO, ETIQUETA_METODO } from '@/domain/pedido';
 import { mensajeUsuario } from '@/infrastructure/api/errores';
 import { tienda } from '@/infrastructure/tienda';
-import { AvisoDemo } from '@/features/tienda/aviso-demo';
 import { exigirSesion } from '@/features/tienda/cuenta-guard';
 import { PanelReintento } from '@/features/tienda/panel-reintento';
 import { ResumenTotales } from '@/features/tienda/resumen-totales';
@@ -77,7 +76,6 @@ export default async function PedidoPage({ params, searchParams }: Props) {
           </div>
         </div>
 
-        <AvisoDemo className="mt-6" />
         <div className="mt-6 space-y-3" aria-live="polite">
           {aviso && <Alerta tono="error">{aviso}</Alerta>}
           {pagoTarjetaOk && <Alerta tono="aviso"><strong>Compra simulada:</strong> no se realizó ningún cobro real a ninguna tarjeta.</Alerta>}

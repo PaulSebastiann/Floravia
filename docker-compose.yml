@@ -132,7 +132,7 @@ services:
     environment:
       NEXT_PUBLIC_SITE_URL: ${FRONTEND_URL:?Define FRONTEND_URL con la URL HTTPS publica}
       NEXT_PUBLIC_WHATSAPP: ${NEXT_PUBLIC_WHATSAPP:-5930000000000}
-      # URL interna fija: no existe caída automática al catálogo/demo local.
+      # URL interna fija de la API.
       FLORAVIA_API_URL: http://api:8080
       FLORAVIA_COOKIE_SECURE: ${FLORAVIA_COOKIE_SECURE:-}
     ports:

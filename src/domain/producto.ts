@@ -32,8 +32,6 @@ interface ProductoBase {
   readonly stockDisponible?: number;
   /** Texto libre de cuidados que escribe el admin (el backend aun no tiene atributos estructurados). */
   readonly cuidados?: string;
-  /** 'api' = producto real del backend. Sin foto muestra un marcador neutro, nunca una ilustracion. */
-  readonly fuente?: 'api';
   readonly destacado: boolean;
   readonly masVendido: boolean;
 }

@@ -3,11 +3,11 @@
 import { redirect } from 'next/navigation';
 import { validarComprobante } from '@/domain/comprobante';
 import { hrefIngresar } from '@/domain/redireccion';
-import { normalizarTarjetaDemo, soloDigitos, validarTarjeta, validarTarjetaDemo } from '@/domain/tarjeta';
+import { soloDigitos, validarTarjeta } from '@/domain/tarjeta';
 import { hayErrores, validarTexto } from '@/domain/validaciones-cuenta';
 import { ApiError, ApiNoDisponible, mensajeUsuario } from '@/infrastructure/api/errores';
 import { leerJwt } from '@/infrastructure/api/sesion';
-import { modoDemo, tienda } from '@/infrastructure/tienda';
+import { tienda } from '@/infrastructure/tienda';
 import { texto, type EstadoForm } from './estado';
 
 type Metodo = 'TRANSFERENCIA' | 'TARJETA';
@@ -38,12 +38,6 @@ function leerPago(fd: FormData, comprobanteObligatorio: boolean): { datos?: Dato
       numero: texto(fd, 'numero', 40), titular: texto(fd, 'titular', 80),
       mes: texto(fd, 'mes', 2), anio: texto(fd, 'anio', 4), cvv: texto(fd, 'cvv', 4),
     };
-    // Demostracion: cualquier numero, fecha, nombre y CVV se acepta (solo debe haber un numero).
-    if (modoDemo()) {
-      const e = validarTarjetaDemo(f);
-      if (hayErrores(e)) return { errores: Object.fromEntries(Object.entries(e).filter(([, v]) => v)) as Record<string, string> };
-      return { errores, datos: { metodo, tarjeta: normalizarTarjetaDemo(f) } };
-    }
     const e = validarTarjeta(f);
     if (hayErrores(e)) return { errores: Object.fromEntries(Object.entries(e).filter(([, v]) => v)) as Record<string, string> };
     let anio = Number(f.anio);
@@ -84,8 +78,8 @@ async function pagarYRedirigir(idPedido: number, p: DatosPago): Promise<never> {
     }
     redirect(aviso ? `${base}?aviso=${aviso}` : `${base}?nuevo=1`);
   }
-  // API real: sin comprobante el pedido queda reservado y se sube despues. Demostracion: se registra igual (comprobante opcional).
-  if (p.comprobante || modoDemo()) {
+  // Sin comprobante el pedido queda reservado y se puede completar desde su pantalla.
+  if (p.comprobante) {
     let aviso: AvisoPedido | undefined;
     try {
       await tienda().pagarPorTransferencia(idPedido, p.comprobante, p.referencia);
@@ -167,7 +161,7 @@ export async function pagarPedidoAccion(_prev: EstadoForm, fd: FormData): Promis
   const idPedido = Number(texto(fd, 'idPedido', 12));
   if (!Number.isInteger(idPedido) || idPedido < 1) return { error: 'Pedido no válido.' };
 
-  const pago = leerPago(fd, !modoDemo());
+  const pago = leerPago(fd, true);
   if (hayErrores(pago.errores) || !pago.datos) return { errores: pago.errores };
   return pagarYRedirigir(idPedido, pago.datos);
 }

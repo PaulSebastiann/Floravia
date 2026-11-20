@@ -1,11 +1,11 @@
 import 'server-only';
 
-/** URL interna obligatoria de la API .NET. La tienda real nunca cae a datos locales. */
+/** URL interna obligatoria de la API .NET. */
 export function urlApi(): string {
   const u = process.env['FLORAVIA_API_URL']?.trim();
   if (!u) {
     throw new Error(
-      'Falta FLORAVIA_API_URL. Floravia requiere la API y PostgreSQL; el modo demo no está habilitado.',
+      'Falta FLORAVIA_API_URL. Floravia requiere la API y PostgreSQL.',
     );
   }
   return u.replace(/\/+$/, '');

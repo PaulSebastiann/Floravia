@@ -3,7 +3,6 @@
 **/almacen
 node_modules
 .next
-.demo-data
 coverage
 test-results
 playwright-report

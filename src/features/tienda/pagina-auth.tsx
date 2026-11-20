@@ -1,7 +1,6 @@
 import { Flower2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Container } from '@/components/ui/container';
-import { AvisoDemo } from './aviso-demo';
 
 /** Marco comun de ingresar / crear cuenta. */
 export function PaginaAuth({ titulo, subtitulo, aviso, children }: { titulo: string; subtitulo: string; aviso?: ReactNode; children: ReactNode }) {
@@ -11,7 +10,6 @@ export function PaginaAuth({ titulo, subtitulo, aviso, children }: { titulo: str
         <Flower2 className="size-9 text-petal-700" aria-hidden="true" />
         <h1 className="mt-3 font-display text-4xl font-semibold text-moss-900">{titulo}</h1>
         <p className="mt-2 text-muted">{subtitulo}</p>
-        <AvisoDemo className="mt-5" />
         {aviso && <div className="mt-5">{aviso}</div>}
         <div className="mt-7">{children}</div>
       </div>

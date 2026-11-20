@@ -65,26 +65,3 @@ export function validarTarjeta(d: DatosTarjetaForm, ahora = new Date()): Errores
   if (cvv.length !== largo || cvv !== d.cvv.trim()) e.cvv = `El CVV debe tener ${largo} dígitos.`;
   return e;
 }
-
-/**
- * Validacion PERMISIVA para la demostracion (sin API): acepta cualquier numero, fecha, nombre y CVV.
- * Solo exige que haya algo en el numero, porque de ahi salen la marca y los ultimos 4 del comprobante.
- */
-export function validarTarjetaDemo(d: DatosTarjetaForm): ErroresTarjeta {
-  return soloDigitos(d.numero).length === 0 ? { numero: 'Escribe un número de tarjeta (cualquiera sirve: es una simulación).' } : {};
-}
-
-/** Normaliza lo que el usuario escribio a los tipos que espera el pago; lo que falte o no sea numerico toma un valor de prueba. */
-export function normalizarTarjetaDemo(d: DatosTarjetaForm): {
-  numero: string; titular: string; mesVencimiento: number; anioVencimiento: number; cvv: string;
-} {
-  const mes = Number(d.mes);
-  const anio = Number(d.anio);
-  return {
-    numero: soloDigitos(d.numero),
-    titular: d.titular.trim().toUpperCase() || 'TITULAR DE PRUEBA',
-    mesVencimiento: Number.isInteger(mes) && mes >= 1 && mes <= 12 ? mes : 12,
-    anioVencimiento: Number.isInteger(anio) && anio > 0 ? (anio < 100 ? 2000 + anio : anio) : 2099,
-    cvv: soloDigitos(d.cvv) || '000',
-  };
-}

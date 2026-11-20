@@ -46,8 +46,6 @@ export interface TarjetaPrueba {
 }
 
 export interface MetodosPago {
-  /** true = datos de demostracion (modo sin API): ficticios, sin comprobante obligatorio y con tarjeta permisiva. */
-  readonly ficticio?: boolean;
   readonly transferencia: DatosBancarios;
   readonly tarjetasDePrueba: readonly TarjetaPrueba[];
   readonly avisoTarjeta?: string;

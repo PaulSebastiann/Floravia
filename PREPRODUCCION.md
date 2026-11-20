@@ -1,7 +1,7 @@
 # Despliegue de preproducción
 
 Floravia se despliega como un único stack: PostgreSQL, migración idempotente del catálogo,
-API .NET y frontend Next.js optimizado. El runtime no utiliza archivos demo.
+API .NET y frontend Next.js optimizado.
 
 ## 1. Preparar variables
 

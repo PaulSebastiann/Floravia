@@ -6,7 +6,7 @@ Vive en la raiz de este repositorio (`src/`, `package.json`, `next.config.mjs`) 
 ## Fuente de datos obligatoria
 
 `FLORAVIA_API_URL` es obligatoria. Catálogo, cuentas, carrito, pedidos y pagos siempre pasan por la
-API .NET y PostgreSQL. Si falta la variable, la aplicación falla explícitamente y no usa datos mock.
+API .NET y PostgreSQL. Si falta la variable, la aplicación falla explícitamente.
 
 ```bash
 printf 'FLORAVIA_API_URL=http://localhost:8081\nFLORAVIA_COOKIE_SECURE=false\n' > .env.local
@@ -36,7 +36,6 @@ src/
   domain/            Tipos y reglas puras (dinero en centavos, carrito, pedido, validaciones, tarjeta, redireccion segura)
   infrastructure/
     api/             Cliente HTTP (solo servidor), DTO exactos de la API, mapeos, sesion por cookies, adaptador de catalogo
-    mocks/           Fixtures conservados únicamente para pruebas unitarias
   app/acciones/      Server Actions: cuenta, carrito, checkout (validan TODO en servidor)
   app/api/tienda/estado   Sesion + carrito para el header (no-store)
   features/tienda/   UI de carrito, cuenta, checkout, pedido
@@ -69,7 +68,6 @@ El frontend muestra las fotos que cargue el administrador (`POST /api/admin/prod
 ## Pruebas
 
 - `npm test`: dominio, validaciones, tarjeta, `volver`, JWT, mapeos y slug, buscador, menu, boton.
-- `motor.test.ts` conserva cobertura del motor histórico, que ya no forma parte del runtime desplegable.
 - `e2e/`: **E2E contra una API FALSA** (`e2e/api-falsa.mjs`) escrita a partir del contrato leido en el codigo C#. Verifica que **el frontend cumple ese contrato**, no que el backend real se comporte igual. Para correrlo:
 
 ```bash

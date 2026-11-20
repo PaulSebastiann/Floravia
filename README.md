@@ -9,12 +9,11 @@ Requisitos: Node.js 20.9 o superior.
 ```bash
 npm ci
 npm run dev                  # http://localhost:3000
-npm run verify               # tipos, 32 pruebas y build de produccion
+npm run verify               # tipos, pruebas y build de producción
 ```
 
 El frontend consume exclusivamente la API real: catálogo, precios, stock, carrito, cuentas y
-pedidos se guardan en PostgreSQL. Si falta `FLORAVIA_API_URL`, la aplicación falla explícitamente;
-no existe una caída silenciosa a datos demo. El catálogo inicial de 26 productos se aplica de forma
+pedidos se guardan en PostgreSQL. `FLORAVIA_API_URL` es obligatoria. El catálogo inicial de 26 productos se aplica de forma
 idempotente en cada despliegue mediante `database/02_catalogo_tienda.sql`.
 
 ## 🧱 Arquitectura

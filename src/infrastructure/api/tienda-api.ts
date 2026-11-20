@@ -174,7 +174,7 @@ export async function pagarConTarjeta(
 }
 
 export async function pagarPorTransferencia(idPedido: number, comprobante: File | undefined, referencia?: string): Promise<void> {
-  // La API exige comprobante en transferencias (solo la demostracion lo hace opcional).
+  // La API exige comprobante para registrar una transferencia.
   if (!comprobante) throw new ApiError(400, 'Regla de negocio', 'Adjunta el comprobante de tu transferencia.');
   const fd = new FormData();
   fd.set('comprobante', comprobante, comprobante.name);

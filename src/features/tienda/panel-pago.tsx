@@ -32,7 +32,6 @@ const ETIQUETAS_BANCO: ReadonlyArray<readonly [keyof MetodosPago['transferencia'
  */
 export function PanelPago({ metodos, errores, total, inicial = 'TRANSFERENCIA', comprobanteObligatorio = false, deshabilitado }: Props) {
   const id = useId();
-  const demo = metodos.ficticio === true;
   const [metodo, setMetodo] = useState<MetodoElegido>(inicial);
   const [numero, setNumero] = useState('');
 
@@ -69,7 +68,6 @@ export function PanelPago({ metodos, errores, total, inicial = 'TRANSFERENCIA', 
             <div className="rounded-2xl border border-line bg-cream-100/60 p-5">
               <p className="flex flex-wrap items-center gap-2 font-semibold text-moss-900">
                 <Banknote className="size-5" aria-hidden="true" />Datos para transferir
-                {demo && <span className="rounded-full bg-sun-100 px-2.5 py-0.5 text-xs font-semibold text-sun-800">Datos ficticios de demostración</span>}
               </p>
               <dl className="mt-3 grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
                 {ETIQUETAS_BANCO.map(([k, et]) => (
@@ -84,27 +82,20 @@ export function PanelPago({ metodos, errores, total, inicial = 'TRANSFERENCIA', 
               Elige pago con tarjeta o escríbenos para recibirlos.
             </Alerta>
           )}
-          {demo ? (
-            <Alerta tono="info">
-              Demostración: no transfieras dinero real y no necesitas subir comprobante. Al confirmar, tu pedido queda
-              «pendiente de verificación», como en la tienda real.
-            </Alerta>
-          ) : (
-            <Alerta tono="info">
-              Tu pedido se reserva por tiempo limitado (normalmente 30 minutos). Transfiere y sube el comprobante dentro de ese plazo;
-              después un administrador lo verificará y confirmará tu pedido.
-            </Alerta>
-          )}
+          <Alerta tono="info">
+            Tu pedido se reserva por tiempo limitado (normalmente 30 minutos). Transfiere y sube el comprobante dentro de ese plazo;
+            después un administrador lo verificará y confirmará tu pedido.
+          </Alerta>
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label htmlFor={`${id}-comp`} className="mb-1.5 block text-sm font-semibold text-moss-900">
-                Comprobante {comprobanteObligatorio && !demo ? '' : demo ? '(opcional en la demostración)' : '(opcional ahora)'}
+                Comprobante {comprobanteObligatorio ? '' : '(opcional ahora)'}
               </label>
               <input id={`${id}-comp`} name="comprobante" type="file" accept={COMPROBANTE_ACCEPT} disabled={deshabilitado}
                 aria-invalid={errores['comprobante'] ? true : undefined} aria-describedby={`${id}-comp-ayuda`}
                 className={cn(clasesInput, 'h-auto py-2.5 file:mr-3 file:rounded-full file:border-0 file:bg-moss-100 file:px-4 file:py-1.5 file:text-sm file:font-medium file:text-moss-900')} />
               <p id={`${id}-comp-ayuda`} className={cn('mt-1.5 text-xs', errores['comprobante'] ? 'text-petal-700' : 'text-muted')}>
-                {errores['comprobante'] ?? (demo ? 'Puedes adjuntar cualquier imagen o PDF (máx. 5 MB) o continuar sin archivo.' : 'JPG, PNG, WEBP o PDF · máx. 5 MB. Si aún no transfieres, podrás subirlo en el siguiente paso.')}
+                {errores['comprobante'] ?? 'JPG, PNG, WEBP o PDF · máx. 5 MB. Si aún no transfieres, podrás subirlo en el siguiente paso.'}
               </p>
             </div>
             <Campo id={`${id}-ref`} name="referencia" etiqueta="Referencia de la transferencia (opcional)" maxLength={100} autoComplete="off" disabled={deshabilitado} />
@@ -122,7 +113,7 @@ export function PanelPago({ metodos, errores, total, inicial = 'TRANSFERENCIA', 
           <div className="grid gap-5 sm:grid-cols-2">
             <Campo id={`${id}-num`} name="numero" etiqueta="Número de tarjeta" inputMode="numeric" autoComplete="off" placeholder="4242 4242 4242 4242"
               value={numero} onChange={(e) => setNumero(formatearNumero(e.target.value))} error={errores['numero']} disabled={deshabilitado}
-              claseContenedor="sm:col-span-2" ayuda={numero ? `Detectada: ${detectarMarca(numero)}` : demo ? 'Escribe cualquier número: es una simulación.' : undefined} />
+              claseContenedor="sm:col-span-2" ayuda={numero ? `Detectada: ${detectarMarca(numero)}` : undefined} />
             <Campo id={`${id}-tit`} name="titular" etiqueta="Nombre del titular" autoComplete="off" maxLength={80} error={errores['titular']} disabled={deshabilitado} claseContenedor="sm:col-span-2" />
             <div className="grid grid-cols-2 gap-3">
               <Campo id={`${id}-mes`} name="mes" etiqueta="Mes (MM)" inputMode="numeric" maxLength={2} placeholder="12" autoComplete="off" error={errores['mes']} disabled={deshabilitado} />
@@ -143,7 +134,7 @@ export function PanelPago({ metodos, errores, total, inicial = 'TRANSFERENCIA', 
                 ))}
               </ul>
               <p className="mt-3 text-xs text-muted">
-                {demo ? 'En la demostración cualquier número, fecha, nombre y CVV se aprueba, salvo estos números de prueba.' : 'Usa cualquier titular, un vencimiento futuro y un CVV de 3 dígitos (4 en Amex).'}
+                Usa cualquier titular, un vencimiento futuro y un CVV de 3 dígitos (4 en Amex).
               </p>
             </details>
           )}
